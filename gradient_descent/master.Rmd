@@ -5,8 +5,8 @@
 ***
 
 > Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
-                              [LEG GitLab](http://git.leg.ufpr.br/u/laureano),
-                              [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11)]
+                               [LEG GitLab](http://git.leg.ufpr.br/u/laureano),
+                               [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11)]
                                  
 ### Março de 2016
 
