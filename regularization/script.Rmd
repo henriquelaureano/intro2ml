@@ -1,0 +1,244 @@
+# Sabatina,
+
+## *assunto*: Regularização
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                 [LEG GitLab](http://git.leg.ufpr.br/u/laureano),
+                                 [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11)]
+
+### Abril de 2016
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=125)
+```
+
+***
+
+### Banco de dados
+
+***
+
+```{r}
+data("longley")
+```
+
+***
+
+> Um *dataset* de 7 variáveis econômicas, observadas de 1947 até 1962 (*n = 16*)
+
++ `GNP.deflator`
+    + deflator de preços implícito do GNP
+
++ `GNP`
+    + Produto Nacional Bruto
+
++ `Unemployed`
+    + Número de desempregados (*1954 = 100*)
+
++ `Armed.Forces`
+    + número de pessoas nas forças armadas
+
++ `Population`
+    + população 'não institucionalizada' \(\geq\) 14 anos de idade
+
++ `Year`
+    + a ano (tempo)
+
++ `Employed`
+    + número de pessoas empregadas
+
+***
+
+```{r, fig.width=10, fig.height=10}
+summary(longley)
+lattice:: splom(longley, pscales = 0, col = 1, type = c("p", "g", "smooth"), xlab = NULL
+                , main = "Todos os possíveis gráficos de dispersão 2 x 2"
+                , sub = "Curvas de tendência estimadas por suavização loess")
+```
+
+***No gráfico acima podemos observar que várias variáveis são altamente correlacionadas,
+   como por exemplo: `Employed` x `Year`, `Year` x `Population`, `Employed` x `GNP`,
+   `Year` x `GNP`, `Population` x `GNP`, `Year` x `GNP.deflator`, `Population` x
+   `GNP.deflator`, `GNP` x `GNP.deflator`***
+
+***
+
+### Regularização
+
+***
+
+```{r}
+library(glmnet)
+```
+
+***
+
+Por *default* a função `glmnet` utiliza um modelo linear Gaussiano
+
+***
+
+*matriz de covariáveis*
+
+```{r}
+(x <- model.matrix(Employed ~ ., longley)[, -1])
+```
+
+*vetor resposta*
+
+```{r}
+y <- longley$Employed
+```
+
+***
+
+Na função `glmnet` temos o argumento `alpha`
+
++ `alpha` = 0, regressão *ridge*
+
++ `alpha` = 1 (*default*), regressão *lasso*
+
+> Pra cada tipo de regressão (*lasso* e *ridge*) são ajustados três modelos, cada um
+  com um \(\lambda\) diferente, e assim verificamos como isso impacta a estimação
+
+Por *default* é usada uma sequência de 100 valores pra \(\lambda\), onde o maior valor é o menor
+valor para o qual todos os coeficientes são zero, e o menor é 0.0001, caso o número de observações
+seja maior que o número de variáveis, como acontece aqui
+
+***
+
+#### *lasso*
+
+***
+
+```{r, fig.width=10, fig.height=3.5}
+fit <- glmnet(x, y)
+fit2 <- glmnet(x, y, lambda = seq(3, .001, length.out = 100))
+fit3 <- glmnet(x, y, lambda = seq(3, .01, length.out = 100))
+
+par(mfrow = c(1, 3))
+plot(fit, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda default")
+plot(fit2, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda: seq(3, 0.001, length.out = 100)")
+plot(fit3, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda: seq(3, 0.01, length.out = 100)")
+```
+
+No gráfico da esquerda é usado o \(\lambda\) *default*
+
+**Na abscissa temos o log de \(\lambda\), na ordenada temos os valores do coeficientes**
+
+**Cada curva é uma variável e no topo dos gráficos temos o número de coeficientes
+  diferentes de zero**
+
+O maior log de \(\lambda\) é próximo de 1, logo, o maior \(\lambda\) é próximo de 3
+
+3 é o maior \(\lambda\) considerado nos outros modelos
+
+O número de \(\lambda\)s é fixo, 100
+
+O que foi aumentando (**leia-se, ficando mais próximo de zero**) é o \(\lambda\) mínimo
+
+**No gráfico do meio ele é de 0.001 e no gráfico da direira é de 0.01, lembrando que o
+  *default* é de 0.0001, ou seja, fomos aumentando o \(\lambda\) mínimo por uma razão de
+  10**
+
+***
+
+*Observações:*
+
+**No \(\lambda\) *default* e no \(\lambda\) mínimo de 0.001 acabamos com todos os
+  coeficientes diferentes de zero, quando aumentamos o \(\lambda\) mínimo pra 0.01
+  terminamos com 3 coeficientes de zero**
+
+***
+
+#### *ridge*
+
+***
+
+```{r, fig.width=10, fig.height=3.5}
+fit4 <- glmnet(x, y, alpha = 0)
+fit5 <- glmnet(x, y, alpha = 0, lambda = seq(3000, .001, length.out = 100))
+fit6 <- glmnet(x, y, alpha = 0, lambda = seq(3000, .01, length.out = 100))
+
+par(mfrow = c(1, 3))
+plot(fit4, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda default")
+plot(fit5, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda: seq(3000, 0.001, length.out = 100)")
+plot(fit6, xvar = "lambda", ylab = "Coeficientes", las = 1, sub = "Lambda: seq(3000, 0.01, length.out = 100)")
+```
+
+O maior log de \(\lambda\) é próximo de 8, logo, o maior \(\lambda\) é próximo de 3000
+
+3000 é o maior \(\lambda\) considerado nos outros modelos
+
+***
+
+*Observações:*
+
+**Para todos os \(\lambda\)s terminamos com todos os coeficientes diferentes de zero,
+  na verdade os coeficientes se mostram diferentes de zero em todo o *range* da sequência
+  de \(\lambda\)**
+
+***
+
+#### *E olhando para as estimativas dos coeficientes? (pra ambas regressões)*
+
+***
+
+```{r}
+round(cbind(coefficients(fit, s = 0.0001), coefficients(fit4, s = 0.0001)), 5)
+round(cbind(coefficients(fit2, s = 0.001), coefficients(fit5, s = 0.001)), 5)
+round(cbind(coefficients(fit3, s = 0.01), coefficients(fit6, s = 0.01)), 5)
+```
+
+***
+
+**Pegando o \(\lambda\) de 0.0001**
+
+Quando mudamos o tipo de regressão e deixamos o \(\lambda\) *default* as estimativas
+diferem consideravelmente! Maaaas alguns padrões ainda podem ser traçados, como por 
+exemplo: O maior coeficiente ainda é o da variável `Year`, seguido de `Population`
+(com um detalhe, na regressão *lasso* o coeficiente é negativo, na regressão *ridge* ele
+é positivo!)
+
+Com base nas estimativas podemos dizer que existe uma relação positiva com `Year` e uma
+relação negativa com `Unemployed` e `Armed.Forces`, i.e, conforme o ano passa o número
+de pessoas empregadas aumenta (`Employed`) e conforme o desemprego e o número de pessoas
+nas forças armadas aumenta, o número de pessoas desempregados diminui. Contudo, esses 
+dois últimos coeficientes são pequenos, logo, essa relação não é muito grande
+
+**Pegando o \(\lambda\) de 0.001**
+
+Aqui as estimativas são muito mais próximas. O maior coeficiente ainda pertence ao `Year`
+e a menor a `Popupation`, i.e., conforme a população aumenta o número de pessoas 
+empregadas diminui. Com exceção da variável `Year`, conforme as variáveis aumentam o 
+valor da resposta diminui
+
+**Pegando o \(\lambda\) de 0.01**
+
+Na regressão *lasso* apenas três coeficientes foram diferentes de zero, `Unemployed`,
+`Armed.Forces` e `Year`. Na regressão *ridge* todos foram diferentes de zero. Nessas
+três variáveis existe uma certa conformidade de valores
+
+***
+
+*Considerações:*
+
+A regressão *ridge* é conhecida por falhar na parcimônia do modelo, incluindo um número
+maior de variáveis no modelo. Isso pode justificar o comportamento observado com
+\(\lambda\) = 0.01
+
+Em geral, quando não deixamos o \(\lambda\) no *default* os resultados obtidos com as
+duas regressões são similares, apontando para as mesmas direções
+
+Lembrando que esse conjunto de dados é famoso por sua alta colinearidade
+
+Com \(\lambda\)s maiores as regressão divergem em número de variáveis diferentes de zero,
+com \(\lambda\)s menores algumas estimativas se mostram diferentes e com \(\lambda\)s
+intermediários (\(\lambda\) de 0.001, nesse caso), as estimativas se mostram muito mais
+similares
+
+***
