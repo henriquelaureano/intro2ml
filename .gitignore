@@ -2,7 +2,9 @@ cache/
 css/
 js/
 grad.desc_0/
+grad.desc_0.html
 grad.desc_1/
+grad.desc_1.html
 *.db
 *.aux
 *.log
