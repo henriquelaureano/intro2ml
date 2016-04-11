@@ -1,0 +1,11 @@
+cache/
+css/
+js/
+grad.desc_0/
+grad.desc_1/
+*.db
+*.aux
+*.log
+*.synctex.gz
+*.toc
+*-concordance.tex
