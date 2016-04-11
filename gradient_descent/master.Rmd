@@ -1,0 +1,358 @@
+# Gradient descent
+
+## *exemplos*
+
+***
+
+> Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                              [LEG GitLab](http://git.leg.ufpr.br/u/laureano),
+                              [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11)]
+                                 
+### Março de 2016
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+
+```
+
+```{r, include=FALSE}
+rm(list = ls())
+```
+
+> De forma intuitiva o algoritmo de gradiente descendente é
+  um método para encontrar o mínimo de uma função de forma iterativa
+
+***
+
+## Batch
+
+***
+
+\[ f(x, y) = x^{2} + 2 y^{2} \]
+
+```{r, fig.keep='none'}
+library(animation)
+grad.desc()[1:3]
+```
+
+```{r, echo=FALSE}
+saveHTML(
+  grad.desc(col.contour = 1, col.arrow = 2)
+  , img.name = "grad.desc_0"
+  , imgdir = "grad.desc_0"
+  , interval = .2
+  , htmlfile = "grad.desc_0.html")
+```
+
+<iframe src="grad.desc_0.html" width=100% height=625 frameborder="0" scrolling="no"> </iframe>
+
+***
+
+\[ f(x, y) = \sin(0.5x^{2} - 0.25y^{2} + 3) \cos(2x + 1 - e^{y}) \]
+
+*Aumentando o tamanho do passo, argumento* `gamma`
+
+O *default* é 0.05
+
+```{r, fig.keep='none', warning=TRUE}
+fn <- function(x, y) sin(.5*x**2 - .25*y**2 + 3) * cos(2*x + 1 - exp(y))
+grad.desc(fn, init = c(-1, .5), gamma = .3, tol = 1e-04)[1:3]
+```
+
+```{r, echo=FALSE}
+ani.options(nmax = 70)
+saveHTML(
+  grad.desc(function(x, y) sin(.5*x**2 - .25*y**2 + 3) * cos(2*x + 1 - exp(y))
+            , rg = c(-2, -2, 2, 2), init = c(-1, .5), gamma = .3, tol = 1e-04
+            , col.contour = 1, col.arrow = 2)
+  , img.name = "grad.desc_1_"
+  , imgdir = "grad.desc_1"
+  , interval = .2
+  , htmlfile = "grad.desc_1.html")
+```
+
+<iframe src="grad.desc_1.html" width=100% height=650 frameborder="0" scrolling="no"> </iframe>
+
+***
+
+Referência: [Demonstration of the Gradient Descent Algorithm](http://vis.supstat.com/2013/03/gradient-descent-algorithm-with-r/)
+
+***
+
+### Construindo um exemplo
+
+```{r}
+x0 <- rep(1, 5) ; x1 <- 1:5
+x <- as.matrix(cbind(x0, x1))
+ 
+y <- as.matrix(c(3, 7, 5, 11, 14))
+m <- nrow(y)
+
+x.scaled <- x
+x.scaled[ , 2] <- (x[ , 2] - mean(x[ , 2])) / sd(x[ , 2])
+# essa padronização aumenta a velocidade de convergência do algoritmo
+
+solve(t(x) %*% x) %*% t(x) %*% y
+lm(y ~ x[ , 2])$coefficients
+
+solve(t(x.scaled) %*% x.scaled) %*% t(x.scaled) %*% y
+lm(y ~ x.scaled[ , 2])$coefficients
+```
+
+***
+
+**Hipótese linear**
+
+\[ h_{\theta} (x) = \theta_{0} + \theta_{1} x \]
+
+A ideia é minimizar a soma de quadrados dos erros,
+que no contexto de *machine learning* é representada pela **função custo**
+
+\[ J(\theta_{0}, \theta_{1}) = \frac{1}{2m} \sum_{i=1}^{m} (h_{\theta} (x^{(i)}) - y^{(i)})^{2} \]
+
+Para \(j = 1\) e \(j = 0\) o **algoritmo do gradiente descendente** é
+
+*Repetir até convergência:*
+
+\[ \theta_{j} := \theta_{j} - \alpha \frac{\partial}{\partial \theta_{j}} J(\theta_{0}, \theta_{1}) \]
+
+Onde
+
+\[ \frac{\partial}{\partial \theta_{j}} J(\theta) = \frac{1}{m} \sum_{i=1}^{m} (h_{\theta} (x^{(i)}) - y^{(i)}) x_{j}^{(i)} \]
+
+Dessa forma o **algoritmo do gradiente descendente** fica
+
+*Repetir até convergência:*
+
+\[ \theta_{j} := \theta_{j} - \alpha \frac{1}{m} \sum_{i=1}^{m} (h_{\theta} (x^{(i)}) - y^{(i)}) x_{j}^{(i)} \]
+
+***
+
+*Esse código não é eficiente, mas é intuitivo*
+
+```{r}
+# definindo a derivada da função custo em forma matricial
+grad <- function(x, y, theta){
+  gradient <- (1/m)*( t(x) %*% ( (x %*% t(theta)) - y ) )
+  return(t(gradient))}
+ 
+# definindo o algoritmo
+grad.descent <- function(x, maxit){
+  theta <- matrix(c(0, 0), nrow = 1)
+  alpha = .05 # taxa de aprendizado padrão
+  for(i in 1:maxit){
+    theta <- theta - alpha*grad(x, y, theta)}
+  return(theta)}
+
+# objetivo: 0.2 e 2.6
+grad.descent(x, 100)
+grad.descent(x, 500)
+grad.descent(x, 1000)
+
+# objetivo: 8 e 4.110961
+grad.descent(x.scaled, 100)
+grad.descent(x.scaled, 500) # convergência obtida mais rapidamente
+```
+
+***
+
+#### **Custo e intuição de convergência**
+
+> Tipicamente nós iteramos o algoritmo até que a mudança na função custo
+  (como os valores de \(\beta_{0}\) e \(\beta_{1}\) atualizados) seja extremamente pequena, i.e.,
+  \(c\). \(c\) pode ser definido como o critério de convergência. Se \(c\) não é atingido após um
+  dado número de iterações, você pode aumentar as iterações ou mudar a taxa de aprendizado 
+  \(\alpha\) para acelerar a convergência
+
+```{r}
+beta <- grad.descent(x, 1000)
+ 
+# definindo a hipótese linear
+h <- function(xi, b0, b1) b0 + b1*xi
+ 
+# definindo a função custo
+cost <- t(mat.or.vec(1, m))
+for(i in 1:m) cost[i, 1] <- (1/(2*m))*(h(x[i, 2], beta[1, 1], beta[1, 2]) - y[i, ])**2
+ 
+(totalCost <- colSums(cost))
+cost1000 <- totalCost
+ 
+# aumentando o número de iterações para 1001
+beta <- grad.descent(x, 1001)
+
+cost <- t(mat.or.vec(1, m))
+for(i in 1:m) cost[i, 1] <- (1/(2*m))*(h(x[i, 2], beta[1, 1], beta[1, 2]) - y[i, ])**2
+
+cost1001 <- colSums(cost)
+ 
+# essa diferença atende à seus critérios de convergência?
+cost1000 - cost1001
+```
+
+***
+
+Referência: [Regression via Gradient Descent in R](http://econometricsense.blogspot.com.br/2011/11/regression-via-gradient-descent-in-r.html)
+
+***
+
+### Mais um exemplo
+
+```{r}
+x <- runif(1000, -5, 5) ; y <- x + rnorm(1000) + 3
+lm(y ~ x)$coefficients
+
+plot(y ~ x, main = "Regressão linear") ; abline(lm(y ~ x), col = 2, lwd = 2)
+```
+
+***
+
+*Outra maneira de programar o algoritmo de gradiente descendente*
+
+```{r}
+# função custo
+cost <- function(X, y, theta) sum((X %*% theta - y)**2) / (2*length(y))
+
+# taxa de aprendizado e número limite de iterações
+alpha <- .01 ; num_iters <- 1000
+
+# armazenando o histórico
+cost_history <- double(num_iters)
+theta_history <- list(num_iters)
+
+# inicializando os coeficientes
+theta <- matrix(c(0, 0), nrow = 2)
+
+# inserindo uma coluna de 1's para o intercepto
+X <- cbind(1, matrix(x))
+
+# gradiente descendente
+for(i in 1:num_iters){
+  error <- X %*% theta - y
+  delta <- t(X) %*% error / length(y)
+  theta <- theta - alpha * delta
+  cost_history[i] <- cost(X, y, theta)
+  theta_history[[i]] <- theta}
+
+theta
+# objetivo: 2.9653794 e 0.9966173
+
+plot(y ~ x, main = "Regressão linear por gradiente descendente")
+for(i in c(1, 3, 6, 10, 14, seq(20, num_iters, 10))) abline(theta_history[[i]], col = "blue")
+abline(theta, col = 2, lwd = 3)
+```
+
+***
+
+*E como a função custo decai?*
+
+```{r}
+plot(cost_history, type = "l"
+     , col = 2, lwd = 2, main = "Função custo", xlab = "Iterações", ylab = "Custo")
+```
+
+***
+
+Referência: [Linear regression by gradient descent](http://digitheadslabnotebook.blogspot.com.br/2012/07/linear-regression-by-gradient-descent.html)
+
+***
+
+## Stochastic
+
+***
+
+***A diferença no algoritmo de gradiente descendente estocástico
+   é que aqui é usada apenas uma observação aleatória da base em cada iteração***
+
+> Quando a base de dados é muito grande esse algoritmo é útil, contudo, as estimativas obtidas com
+  ele não são tão boas quanto a solução ótima global, já que apenas uma observação é usada por
+  iteração
+
+```{r}
+x <- runif(1000000, 1, 100) ; y <- 5 + 4*x
+lm(y ~ x)$coefficients
+
+# gds: gradiente descendente estocástico
+gds <- function(x, y, b0, n, alpha){
+  beta <- as.matrix(cbind(rep(b0[1], n), rep(b0[2], n)))
+  for(i in 2:n){
+    m <- length(x)
+    sample_num <- sample.int(m, 1)
+    xx <- x[sample_num]
+    yy <- y[sample_num]
+    beta[i, 1] <- beta[i-1, 1] - alpha*(beta[i-1, 1] + beta[i-1, 2]*xx - yy)
+    beta[i, 2] <- beta[i-1, 2] - alpha*(xx*(beta[i-1, 1] + beta[i-1, 2]*xx - yy))}
+  return(beta)}
+
+b0 <- c(0, 0)
+
+beta <- gds(x, y, b0, 1000000, .00005)
+
+beta[1e06, ]
+
+plot(beta[1:1000000, 1], type = "l"
+     , col = 2, lwd = 2, xlab = "Iteração", ylab = expression(beta), main = "Coeficientes")
+lines(beta[1:1000000, 2], col = 2, lwd = 2, lty = 2)
+legend(85e04, 1, bty = "n", lty = c(1, 2), lwd = 2, col = 2
+       , legend = c(expression(beta[0]), expression(beta[1])))
+```
+
+***
+
+Referência: [Stochastic gradient descent to find least square in linear regression](https://qizeresearch.wordpress.com/2014/05/23/stochastic-gradient-descent-to-find-least-square-in-linear-regression/)
+
+***
+
+## Boosting
+
+***
+
+***Aqui \(h(x_{i})\) é atualizado com o resíduo de um modelo ajustado,
+   onde esse resíduo é equivalente ao negativo do gradiente***
+
+É escolhido um chute inicial, \(h(x_{i})^{(0)}\),
+é calculado o \(- \partial J(y_{i}, h(x)^{(k)}) / \partial h(x_{i})^{(k)}\)
+
+E é ajustado um modelo de regressão \(g(x_{i})^{(k)}\) fundamentado no negativo do gradiente
+
+\[ h(x_{i})^{(k+1)} = h(x_{i})^{(k)} + \alpha g(x_{i})^{(k)}, \quad k = 0, 1, \cdots \]
+
+até atingir convergência
+
+***
+
+```{r}
+library("mboost")
+```
+
+***
+
+### *Exemplo*: predição de gordura corporal
+
+```{r, fig.width=10}
+data("bodyfat", package = "TH.data")
+
+lm(DEXfat ~ hipcirc + kneebreadth + anthro3a, bodyfat)$coefficients
+
+model.boost <- glmboost(DEXfat ~ hipcirc + kneebreadth + anthro3a, bodyfat)
+coefficients(model.boost, off2int = TRUE)
+
+par(mfrow = c(1, 2), mar = c(5, 4, 4, 5))
+plot(model.boost, off2int = TRUE, col = 2, lwd = 2, main = "Covariáveis")
+plot(model.boost, col = 2, lwd = 2
+     , ylim = range(coefficients(model.boost, which = model.boost$basemodel[[1]]$Xnames[-1]))
+     , main = "Covariáveis") ; layout(1)
+```
+
+```{r}
+plot(AIC(model.boost), col = 2, lwd = 2, main = "AIC pelo número de iterações")
+```
+
+***
+
+Referência: [Model-based Boosting in R, A Hands-on Tutorial Using the R Package mboost
+](https://cran.r-project.org/web/packages/mboost/vignettes/mboost_tutorial.pdf)
+
+***
