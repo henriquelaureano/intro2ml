@@ -14,3 +14,11 @@ Repository with the activities for discipline ce062
 * Professor: [Eduardo Vargas Ferreira](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira)
 
 * Student: [Henrique Aparecido Laureano](http://lattes.cnpq.br/2224901552085090)
+
+***
+
+*Activities:*
+
++ [Gradient descent](http://mynameislaure.github.io/gradient_descent/)
+
++ [Regularization](http://mynameislaure.github.io/regularization/)
