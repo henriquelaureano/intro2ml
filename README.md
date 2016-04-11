@@ -10,8 +10,8 @@ Repository with the activities for discipline ce062
 * Department: Statistics
 * Course: Statistics
 * Period: 1o half of 2016
-* Course page: [`ce062`](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira:ce064)
+* Course page: [ce062](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira:ce064)
+
 * Professor: [Eduardo Vargas Ferreira](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira)
 
-* Student:
-  + [Henrique Aparecido Laureano](http://lattes.cnpq.br/2224901552085090)
+* Student: [Henrique Aparecido Laureano](http://lattes.cnpq.br/2224901552085090)
