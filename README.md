@@ -22,3 +22,5 @@ Repository with the developed activities for discipline ce062
 + [Gradient descent](http://mynameislaure.github.io/gradient_descent/)
 
 + [Regularization](http://mynameislaure.github.io/regularization/)
+
+[Resampling methods](http://mynameislaure.github.io/resampling_methods/)
