@@ -1,0 +1,314 @@
+# Sabatina,
+
+## *assunto*: Métodos de reamostragem
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                 [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                 [GitHub](https://github.com/mynameislaure),
+                                 [LEG GitLab](http://git.leg.ufpr.br/u/laureano)]
+
+### Abril de 2016
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=125)
+```
+
+***
+
+### Banco de dados
+
+***
+
+```{r}
+library(faraway)
+
+data("teengamb")
+```
+
+***
+
+> Estudo sobre jogos de azar em (47) adolescentes da Grã-Bretanha, 5 variáveis foram mensuradas
+
++ `sex`
+    + 0 = masculino, 1 = feminino
+
++ `status`
+    + escore de status socioeconômico baseado na ocupação dos pais
+
++ `income` 
+    + (renda) em libras por semana
+
++ `verbal`
+    + escore verbal, em palavras, entre 12 corretamente definidas
+
++ `gamble`
+    + despesas de jogos de azar em libras por ano
+
+***
+
+```{r, fig.width=10, fig.height=10}
+teengamb$sex <- as.factor(teengamb$sex)
+
+summary(teengamb)
+library(latticeExtra)
+splom(teengamb[2:5], groups = teengamb$sex, type = c("p", "g", "smooth")
+      , col = 1, lty = 1:2, pch = c(1, 4), xlab = NULL
+      , main = "Todos os possíveis gráficos de dispersão 2 x 2 agrupados por sexo"
+      , sub = "Curvas de tendência estimadas por suavização loess"
+      , key = list(text = list(c("Sexo masculino", "Sexo feminino")), columns = 2
+                   , points = TRUE, pch = c(1, 4), lines = TRUE, lty = 1:2))
+```
+
+***Independente da variável em questão as mulheres apresentam uma menor variabilidade,
+   com maior destaque em `gamble` x `status`. As mulheres apresentam maiores valores que
+   os homens apenas quando olhamos para `verbal` x `status`. Em nenhum gráfico se verifica
+   uma clara relação linear e alguns possíveis outliers são observados***
+
+> Pra facilitar a vida vamos trabalhar com apenas uma covariável, por apresentar
+  um comportamento mais 'bonito' escolhemos `income`, a resposta será `gamble`
+
+***
+
+### Validação cruzada por *k - fold*
+#### Estimando o erro quadrático médio em modelos lineares 
+
+***
+
+*Separando o conjunto de dados em k (3) grupos*
+
+```{r}
+# kl: tamanho (length) de cada k
+kl <- function(n, k){
+  stopifnot(k > 0 && n > 0)
+  i <- vector("numeric", k)
+  while(k > 0){
+    i[k] <- round(n/k)
+    n <- n - i[k]
+    k <- k - 1}
+  return(i)}
+
+kl(nrow(teengamb), 3)
+
+# nk: criando os k grupos
+nk <- function(dados, k){
+  n <- nrow(dados)
+  kl <- kl(n, k)
+  gs <- vector("raw", k)
+  for(i in 1:k){
+    # g: grupo
+    g <- sample(nrow(dados), kl[i])
+    # gs: grupos
+    gs[i] <- list(dados[g, ])
+    dados <- dados[-g, ]}
+  names(gs) <- 1:k
+  return(gs)}
+
+k3 <- nk(teengamb, 3)
+
+str(k3)
+```
+
+***
+
+*Estimando o erro quadrático médio*
+
+\[ EQM_{k} = \frac{\sum_{i \in n_{k}} (y_{i} - \hat{y}_{i})^{2}}{n_{k}} \]
+
+```{r}
+eqm <- function(dados, k, gr){
+  nk <- nk(dados, k)
+  eqm <- c()
+  for(i in 1:k){
+    validacao <- as.data.frame(nk[i])
+    names(validacao) <- names(dados)
+    train <- data.frame()
+    for(j in nk[-i]){
+      train <- rbind(train, j)}
+    names(train) <- names(dados)
+    fit <- lm(gamble ~ poly(income, gr), train)
+    eqm <- c(eqm, mean((validacao$gamble - predict(fit, validacao))**2))}
+  names(eqm) <- 1:k
+  return(eqm)}
+
+(eqmk <- eqm(teengamb, 3, 2))
+```
+
+*Escolhemos ajustar um polinômio de grau (`gr`) 2*
+
+*Na dispersão abaixo, olhando para uma suavização um polinômio deste grau parece ser adequado*
+
+```{r}
+xyplot(gamble ~ income, type = c("p", "g", "smooth"), col = 1, teengamb
+       , sub = "Curva de tendência estimada por suavização loess")
+```
+
+***
+
+*Estimando o **EQM** do modelo*
+
+\[ CV = \sum_{k = 1}^{k} \frac{n_{k}}{n} EQM_{k} \]
+
+```{r}
+cv <- function(dados, eqm){
+    return( ((1/nrow(dados)) * kl(nrow(dados), length(eqm))) %*% cbind(eqm) )}
+
+cv(teengamb, eqmk)
+```
+
+***
+
+*Representação gráfica: ajustando polinômios de 2 diferentes graus (1 e 2), cada um 5 vezes!*
+
+```{r}
+gr <- matrix(NA, 5, 2)
+
+for(i in 1:5) for(j in 1:2) gr[i, j] <- cv(teengamb, eqm(teengamb, 3, j))
+
+plot(NA, xlim = c(1, 2), ylim = range(gr), axes = FALSE
+     , xlab = "Grau do polinômio", ylab = "EQM", main = "Cross-validation por k (3) - fold")
+abline(v = c(1, 2), h = seq(min(gr), max(gr), length = 2), col = "gray90")
+for(i in 1:5) lines(gr[i, ], lty = i)
+Axis(side = 1, at = c(1, 2))
+Axis(side = 2, at = round(seq(min(gr), max(gr), length = 2), 2), las = 1)
+```
+
+***3 vezes o polinômio de grau 2 apresenta um erro quadrático médio maior, 1 vez ele apresenta um EQM menor
+   e 1 vez ele se mostra praticamente igual em ambos os graus do polinômio***
+
+***
+
+### Validação cruzada por *leave-one-out*
+#### Estimando o erro quadrático médio em modelos lineares 
+
+***
+
+*Ajustando 5 diferentes polinômios, graus 1, ..., 5*
+
+```{r}
+gr <- vector("numeric", 5)
+
+for(i in 1:5) gr[i] <- cv(teengamb, eqm(teengamb, nrow(teengamb), i))
+
+gr
+```
+
+***
+
+*Representação gráfica*
+
+```{r}
+plot(gr, type = "l", axes = FALSE
+     , xlab = "Grau do polinômio", ylab = "EMQ", main = "Cross-validation por leave-one-out")
+abline(v = 1:5, h = seq(min(gr), max(gr), length = 2), col = "gray90")
+Axis(side = 1, at = 1:5)
+Axis(side = 2, at = round(seq(min(gr), max(gr), length = 2), 2), las = 1)
+```
+
+***Os polinômios de grau 1 e 2 se mostram melhores (menores EQM)!***
+
+***
+
+### Intervalo de confiança percentil por *bootstrap*
+
+***
+
+*Ajustando um modelo de regressão linear simples*
+
+```{r}
+lm(gamble ~ income, teengamb)$coefficients
+```
+
+```{r}
+library(boot)
+
+fit_coef <- function(formula, data, i){
+  dados <- data[i, ]
+  fit <- lm(formula, dados)
+  return(coef(fit))}
+```
+
+***
+
+*Fazendo um número de replicações igual ao número de observações (47) na base de dados*
+
+```{r}
+(fit <- boot(data = teengamb, statistic = fit_coef, R = nrow(teengamb), formula = (gamble ~ income)))
+```
+
+***
+
+*Intervalo de 95% de confiança para \(\beta_{0}\)*
+
+```{r}
+boot.ci(fit, type = "perc", index = 1)
+```
+
+***
+
+*Intervalo de 95% de confiança para \(\beta_{1}\)*
+
+```{r}
+boot.ci(fit, type = "perc", index = 2)
+```
+
+***
+
+*E se replicarmos isso 500 vezes?*
+
+```{r}
+# coef: coeficientes do bootstrap
+coef_b <-  plyr::rlply(500, function(x){
+  fit <- boot(data = teengamb, statistic = fit_coef, R = nrow(teengamb), formula = (gamble ~ income))
+  ci_b0 <- boot.ci(fit, type = "perc", index = 1)
+  ci_b1 <- boot.ci(fit, type = "perc", index = 2)
+  return(c(ci_b0$percent[4:5], ci_b1$percent[4:5]))})
+
+# cb: coeficientes do bootstrap
+cb <- as.data.frame(do.call(rbind, coef_b))
+names(cb) <- c("b0_l", "b0_u", "b1_l", "b1_u")
+```
+
+***
+
+*Na figura abaixo temos as 500 replicações para os mínimos e máximos dos intervalos de cada coeficiente*
+
+```{r, fig.width=10, fig.height=8.5}
+print(xyplot(cb$b0_l ~ 1:500, col = 1, lwd = 2, type = c("p", "g"), xlab = "Replicação"
+             , ylab = expression(beta[0]), main = expression("Mínimo do IC de 95% para"~beta[0])
+             , panel = function(...){
+               panel.xyplot(...)
+               panel.abline(h = c(mean(cb$b0_l), -17.981), lwd = 2:1, lty = 1:2)})
+      , position = c(0, .5, .5, 1), more = TRUE)
+print(xyplot(cb$b0_u ~ 1:500, col = 1, lwd = 2, type = c("p", "g"), xlab = "Replicação"
+             , ylab = expression(beta[0]), main = expression("Máximo do IC de 95% para"~beta[0])
+             , panel = function(...){
+               panel.xyplot(...)
+               panel.abline(h = c(mean(cb$b0_u), 4.373), lwd = 2:1, lty = 1:2)})
+      , position = c(.5, .5, 1, 1), more = TRUE)
+print(xyplot(cb$b1_l ~ 1:500, col = 1, lwd = 2, type = c("p", "g"), xlab = "Replicação"
+             , ylab = expression(beta[1]), main = expression("Mínimo do IC de 95% para"~beta[1])
+             , panel = function(...){
+               panel.xyplot(...)
+               panel.abline(h = c(mean(cb$b1_l), 2.564), lwd = 2:1, lty = 1:2)})
+      , position = c(0, 0, .5, .5), more = TRUE)
+print(xyplot(cb$b1_u ~ 1:500, col = 1, lwd = 2, type = c("p", "g"), xlab = "Replicação"
+             , ylab = expression(beta[1]), main = expression("Máximo do IC de 95% para"~beta[1])
+             , panel = function(...){
+               panel.xyplot(...)
+               panel.abline(h = c(mean(cb$b1_u), 9.713), lwd = 2:1, lty = 1:2)})
+      , position = c(.5, 0, 1, .5))
+```
+
+***Em tracejado temos o valor do intervalo bootstrap e na linha mais grossa a média das 500 replicações***
+
+***Lembrando que para \(\beta_{0}\) o intervalo bootstrap é de (-17.981, 4.373),
+   e para \(\beta_{1}\) o intervalo bootstrap é de (-2.564, 9.713)***
+
+***Uma maior proximidade é observada para o intervalo superior de \(\beta_{1}\)***
+
+***
