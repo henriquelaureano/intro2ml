@@ -23,4 +23,4 @@ Repository with the developed activities for discipline ce062
 
 + [Regularization](http://mynameislaure.github.io/regularization/)
 
-[Resampling methods](http://mynameislaure.github.io/resampling_methods/)
++ [Resampling methods](http://mynameislaure.github.io/resampling_methods/)
