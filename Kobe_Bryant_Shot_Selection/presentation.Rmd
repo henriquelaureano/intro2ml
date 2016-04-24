@@ -1,0 +1,70 @@
+---
+title: "[Kobe Bryant Shot Selection](https://www.kaggle.com/c/kobe-bryant-shot-selection)"
+author: "[Emerson Rigoni](http://lattes.cnpq.br/9410653573760282) \\
+         
+         Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                      [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                      [GitHub](https://github.com/mynameislaure),
+                                      [LEG GitLab](http://git.leg.ufpr.br/u/laureano)]"
+date: "Abril de 2016"
+output:
+  rmarkdown::html_vignette:
+    fig.width: 6.9
+    toc: yes
+---
+
+***
+
+![](cant_really_hit_all.jpg)
+
+```{r, include=FALSE}
+library(knitr)
+
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=100)
+
+rm(list = ls())
+
+settings <- list(par.main.text = list(font = 1, just = "left", x = grid::unit(5, "mm"))
+                 , par.sub.text = list(font = 2, just = "left", x = grid::unit(5, "mm")))
+```
+
+```{r data_path, echo=FALSE}
+path <- "C:/Users/henri/Dropbox/ce062/Kobe_Bryant_Shot_Selection/"
+```
+
+```{r read_data, echo=FALSE}
+data <- read.csv2(paste0(path, "data.csv"), header = TRUE, sep = ",")
+```
+
+***
+
+```{r packages}
+library(latticeExtra)
+```
+
+***
+
+# Conhecendo os dados
+
+***
+
+## Que tipos de arremesso Kode deu durante a carreira?
+
+```{r, fig.width=10.75, out.extra='style = "margin:0 -190px"'}
+barchart(sort(table(data$combined_shot_type)), col = 1, xlim = c(0, 27000)
+         , xlab = "Número de arremessos tentados"
+         , main = "Nº de arremessos por tipo de arremesso"
+         , par.settings = settings
+         , panel=function(...){
+           panel.abline(v = seq(0, 26000, 1000), col = "gray90")
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+***
