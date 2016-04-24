@@ -24,3 +24,7 @@ Repository with the developed activities for discipline ce062
 + [Regularization](http://mynameislaure.github.io/regularization/)
 
 + [Resampling methods](http://mynameislaure.github.io/resampling_methods/)
+
+*Final activity:*
+
++ [Kobe Bryant Shot Selection](http://mynameislaure.github.io/Kobe_Bryant_Shot_Selection/)
