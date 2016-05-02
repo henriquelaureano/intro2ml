@@ -6,10 +6,9 @@ author: "[Emerson Rigoni](http://lattes.cnpq.br/9410653573760282) \\
                                       [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
                                       [GitHub](https://github.com/mynameislaure),
                                       [LEG GitLab](http://git.leg.ufpr.br/u/laureano)]"
-date: "Abril de 2016"
+date: "April 2016"
 output:
   rmarkdown::html_vignette:
-    fig.width: 6.9
     toc: yes
 ---
 
@@ -21,7 +20,7 @@ output:
 library(knitr)
 
 opts_chunk$set(cache=TRUE, cache.path="cache/"
-               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , fig.path="iBagens/", fig.width=6.75, dpi=100, fig.align="center"
                , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
 options(width=100)
 
@@ -36,7 +35,7 @@ path <- "C:/Users/henri/Dropbox/ce062/Kobe_Bryant_Shot_Selection/"
 ```
 
 ```{r read_data, echo=FALSE}
-data <- read.csv2(paste0(path, "data.csv"), header = TRUE, sep = ",")
+kobe <- read.csv2(paste0(path, "data.csv"), header = TRUE, sep = ",")
 ```
 
 ***
@@ -47,24 +46,130 @@ library(latticeExtra)
 
 ***
 
-# Conhecendo os dados
+# Knowing the data
 
 ***
 
-## Que tipos de arremesso Kode deu durante a carreira?
+## What kind of shot Kobe gave during his career?
 
 ```{r, fig.width=10.75, out.extra='style = "margin:0 -190px"'}
-barchart(sort(table(data$combined_shot_type)), col = 1, xlim = c(0, 27000)
-         , xlab = "Número de arremessos tentados"
-         , main = "Nº de arremessos por tipo de arremesso"
+barchart(sort(table(kobe$combined_shot_type))
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = c(0, 27000)
+         , xlab = "Number of shots"
+         , main = "Number of shots by shot type"
          , par.settings = settings
-         , panel=function(...){
+         , panel = function(...){
            panel.abline(v = seq(0, 26000, 1000), col = "gray90")
            args <- list(...)
            panel.text(
              args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
              , pos = 4)
            panel.barchart(...)})
+```
+
+## What kind of shot Kobe gave during regular season and playoffs?
+
+```{r, fig.width=10, out.extra='style = "margin:0 -150px"'}
+devel1 <- as.data.frame(xtabs(~ playoffs + combined_shot_type, kobe))
+
+devel1$combined_shot_type <- factor(
+  devel1$combined_shot_type, levels(devel1$combined_shot_type)[c(1, 3, 6, 2, 5, 4)])
+
+levels(devel1$playoffs) <- c("Regular season", "Playoffs")
+
+levels(devel1$playoffs) <-
+  paste0(levels(devel1$playoffs), ": "
+         , table(kobe$playoffs), " (", round(prop.table(table(kobe$playoffs)), 4)*100, "%)")
+
+barchart(combined_shot_type ~ Freq | playoffs
+         , col = "#0080ff"
+         , border = "transparent"
+         , scales = list(x = "free")
+         , xlim = list(c(0, 27000), c(0, 4500))
+         , strip = strip.custom(bg = "white")
+         , xlab = "Number of shots"
+         , main = "Number of shots by regular season and playoffs"
+         , par.settings = settings
+         , devel1
+         , panel = function(...){
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+## What kind of shot Kobe gave by period?
+
+```{r, fig.height=5.5, fig.width=12, out.extra='style = "margin:0 -250px"'}
+devel2 <- as.data.frame(xtabs(~ period + combined_shot_type, kobe))
+
+devel2$combined_shot_type <- factor(
+  devel2$combined_shot_type, levels(devel2$combined_shot_type)[c(1, 3, 6, 2, 5, 4)])
+
+levels(devel2$period) <-
+  c("1 period", "2 period", "3 period", "4 period", "1 overtime", "2 overtime", "3 overtime")
+
+levels(devel2$period) <-
+  paste0(levels(devel2$period), ": "
+         , table(kobe$period), " (", round(prop.table(table(kobe$period)), 4)*100, "%)")
+
+barchart(combined_shot_type ~ Freq | period
+         , scales = list(x = "free")
+         , strip = strip.custom(bg = "white")
+         , xlab = "Number of shots"
+         , main = "Number of shots by period"
+         , par.settings = settings
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = list(
+           c(0, 11000), c(0, 8000), c(0, 11000), c(0, 10000), c(0, 400), c(0, 50), c(0, 8))
+         , layout = c(4, 2)
+         , devel2
+         , panel = function(...){
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+## How many shots Kobe gave by season?
+
+```{r, fig.height=6}
+devel3 <- kobe
+
+devel3$season <- factor(devel3$season, levels(devel3$season)[20:1])
+
+barchart(devel3$season
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = c(0, 3000)
+         , xlab = "Number of shots"
+         , main = "Number of shots by season"
+         , par.settings = settings
+         , panel = function(...){
+           panel.abline(v = seq(0, 3000, 100), col = "gray90")
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+```{r, fig.height=6}
+xyplot(loc_y ~ loc_x, groups = shot_type
+       , type = c("p", "g")
+       , pch = 19
+       , col = c("#0080ff", "gray")
+       , xlab = "Longitude"
+       , ylab = "Latitude"
+       , main = "Shots"
+       , key = list(text = list(c("2PT Field Goal", "3PT Field Goal")), points = TRUE
+                    , col = c("#0080ff", "gray") , pch = 19, columns = 2)
+       , kobe)
 ```
 
 ***
