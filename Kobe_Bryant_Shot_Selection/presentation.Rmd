@@ -159,6 +159,8 @@ barchart(devel3$season
            panel.barchart(...)})
 ```
 
+## And the dispersion of shots?
+
 ```{r, fig.height=6}
 xyplot(loc_y ~ loc_x, groups = shot_type
        , type = c("p", "g")
