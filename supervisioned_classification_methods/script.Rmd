@@ -1,0 +1,536 @@
+# Sabatina,
+
+## *assunto*: Métodos de classificação supervisionados
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                 [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                 [GitHub](https://github.com/mynameislaure),
+                                 [LEG GitLab](http://git.leg.ufpr.br/u/laureano)]
+
+### Maio de 2016
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=130)
+```
+
+***
+
+<div id="TOC" >
+<ul>
+<li><a href="#banco-de-dados"><font size="5">Banco de dados</font></a></li>
+<li><a href="#regressao-logistica"><font size="5">Regressão Logística</font></a></li>
+<li>
+<a href="#discriminante-de-fischer"><font size="5">Discriminante de Fischer</font></a>
+<ul><li><a href="#linear"><font size="5">Linear</font></a></li></ul>
+<ul><li><a href="#quadratico"><font size="5">Quadrático</font></a></li></ul>
+<ul><li><a href="#regularizado"><font size="5">Regularizado</font></a></li></ul>
+</li>
+<li><a href="#comparando-os-metodos"><font size="5">Comparando os métodos</font></a></li>
+<li><a href="#curvas-roc"><font size="5">Curvas ROC</font></a></li>
+</ul>
+</div>
+
+***
+
+### Banco de dados
+
+***
+
+```{r}
+library(MASS)
+
+data("Pima.tr")
+data("Pima.te")
+```
+
+***
+
+> Uma população de mulheres (532) com no mínimo 21 anos, descendentes da tribo indígina Pima e
+  atualmente vivendo próximo de Phoenix, Arizona, que fizeram o teste para diabetes de acordo o
+  critério da Organização Mundial da Saúde (OMS). Os dados foram coletados pelo Instituto Nacional
+  Norte Americano de Diabetes e Doenças de Digestivas e Renais. No banco de dados de *treino* 
+  (`Pima.tr`) temos 200 indivíduos, e no banco de dados de *teste* (`Pima.te`) temos os demais 332
+  indivíduos
+
++ `npreg`
+    + número de gestações
+
++ `glu`
+    + concentração de glicose no plasma em um teste oral de tolerância à glicose
+
++ `bp` 
+    + pressão sanguínea diastólica (mm Hg)
+
++ `skin`
+    + espessura da prega cutânea no tríceps (mm)
+
++ `bmi`
+    + índice de massa corporal (\(peso (kg) / altura (m)^{2}\))
+
++ `ped`
+    + função de diabetes pedigree
+
++ `age`
+    + idade, em anos
+
++ `type`
+    + `Yes` ou `No` para diabetes de acordo com o critério da OMS
+
+```{r}
+summary(Pima.tr)
+summary(Pima.te)
+```
+
+***
+
+**Na aplicação dos métodos é utilizada `type` como resposta e `bmi` e `ped` como covariáveis**
+
+***
+
+```{r, fig.width=10}
+library(latticeExtra)
+
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.tr"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , xlim = c(15, 70)
+             , ylim = c(0, 2.5)
+             , Pima.tr)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , xlim = c(15, 70)
+             , ylim = c(0, 2.5)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+### Regressão Logística
+
+***
+
+*Função logística*
+
+\[ h(z) = \frac{1}{1 + e^{-z}} \]
+
+```{r}
+h <- function(z) return(1 / (1 + exp(-z)))
+```
+
+***
+
+*Função custo*
+
+\[ J(\theta) = \frac{1}{m}
+               \sum_{i=1}^{m} - y_{i} {\rm log}(h_{\theta}(x_{i}))
+                              - (1 - y_{i}) {\rm log}(1 - (h_{\theta}(x_{i}))) \]
+
+```{r}
+# covariáveis
+X <- as.matrix(cbind(1, Pima.tr[ , c("bmi", "ped")]))
+
+# resposta
+y <- ifelse(Pima.tr$type == "No", 0, 1)
+
+# parâmetros
+theta <- matrix(0, nrow = 3, ncol = 1)
+
+# custo
+custo <- function(theta, X, y){
+  m <- length(y)
+  h <- h(X %*% theta)
+  J <- (1 / m) * (t(- y) %*% log(h) - (1 - t(y)) %*% log(1 - h))
+  return(J)}
+```
+
+***
+
+**Fazendo a estimação pela `optim`**
+
+```{r}
+fit_opt <- optim(c(0, 0, 0), function(theta) custo(theta, X, y))
+
+fit_opt$par
+```
+
+***
+
+***Fazendo o ajuste pela `glm`***
+
+```{r}
+fit_glm <- glm(type ~ bmi + ped
+               , family = "binomial"
+               , Pima.tr)
+
+fit_glm$coefficients
+```
+
+***
+
+**Comparando os coeficientes estimados**
+
+```{r}
+fit_opt$par - fit_glm$coefficients
+```
+
+*Diferenças praticamente nulas (quarta casa decimal em diante)*
+
+***
+
+*O que o modelo estimou?*
+
+```{r, fig.width=10}
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.tr: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.tr)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = ifelse(fit_glm$fitted.values < .5, "No", "Yes")
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.tr: Ajustado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.tr)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+**Predição** (*usando os coeficientes da `glm` - tínhamos que escolher um deles*)
+
+```{r, fig.width=10}
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = ifelse(predict(fit_glm
+                                       , data.frame(bmi = Pima.te$bmi, ped = Pima.te$ped)
+                                       , type = "response") < .5
+                               , "No", "Yes")
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Predito"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+### Discriminante de Fischer
+
+***
+
+```{r}
+library(MASS)
+```
+
+***
+
+#### Linear
+
+***
+
+*Considera que as matrizes de covariância das covariáveis não diferem entre as classes (grupos)*
+
+```{r}
+fit_l <- lda(type ~ bmi + ped, Pima.tr)
+
+pred_l <- predict(fit_l, Pima.te)
+
+table(Pima.te$type, pred_l$class, dnn = list("Observado", "Predito"))
+```
+
+223 mulheres foram diagnosticadas com diabetes, e pelo discriminante linear 195 mulheres (87%)
+foram categorizadas como diabéticas
+
+109 mulheres foram diagnosticadas sem diabetes, e pelo discriminante linear 44 mulheres (40%)
+foram categorizadas como não diabéticas
+
+```{r, fig.width=10}
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_l$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Predito"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+#### Quadrático
+
+***
+
+*Considera que as matrizes de covariância das covariáveis diferem entre as classes*
+
+```{r}
+fit_q <- qda(type ~ bmi + ped, Pima.tr)
+
+pred_q <- predict(fit_q, Pima.te)
+
+table(Pima.te$type, pred_q$class, dnn = list("Observado", "Predito"))
+```
+
+223 mulheres foram diagnosticadas com diabetes, e pelo discriminante linear 204 mulheres (91%)
+foram categorizadas como diabéticas
+
+109 mulheres foram diagnosticadas sem diabetes, e pelo discriminante linear 36 mulheres (33%)
+foram categorizadas como não diabéticas
+
+```{r, fig.width=10}
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_q$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Predito"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+#### Regularizado
+
+***
+
+*Considera dois parâmetros que flexibilizam a possível diferença entre as matrizes de covariância
+ das covariáveis entre as classes e a dependência entre as mesmas covariáveis*
+
+```{r}
+library(klaR)
+
+fit_r <- rda(type ~ bmi + ped, Pima.tr)
+
+pred_r <- predict(fit_r, Pima.te)
+
+table(Pima.te$type, pred_r$class, dnn = list("Observado", "Predito"))
+```
+
+223 mulheres foram diagnosticadas com diabetes, e pelo discriminante linear 169 mulheres (76%)
+foram categorizadas como diabéticas
+
+109 mulheres foram diagnosticadas sem diabetes, e pelo discriminante linear 44 mulheres (40%)
+foram categorizadas como não diabéticas
+
+```{r, fig.width=10}
+print(xyplot(ped ~ bmi
+             , groups = type
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_r$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Predito"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+### Comparando os métodos
+
+***
+
+```{r, fig.width=10, fig.height=10}
+print(xyplot(ped ~ bmi
+             , groups = ifelse(predict(fit_glm
+                                       , data.frame(bmi = Pima.te$bmi, ped = Pima.te$ped)
+                                       , type = "response") < .5
+                               , "No", "Yes")
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Regressão Logística"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, .5, .5, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_l$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Discriminante linear"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, .5, 1, 1), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_q$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Discriminante quadrático"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, .5), more = TRUE)
+print(xyplot(ped ~ bmi
+             , groups = pred_r$class
+             , col = c("#0080ff", "brown")
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Discriminante regularizado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = c("#0080ff", "brown"), pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, .5), more = TRUE)
+```
+
+*Resultados muito próximos são obtidos com a regressão logística e
+ com a análise descriminante linear de Fischer*
+
+*Nenhum dos métodos chega em resultados próximos a classificação original dos dados,
+ que é bem complicada de ser atingida, já que é muito aleatória. Uma ótima justificativa
+ pra essa aleatoriedade são as covariáveis utilizadas. Talvez com as outras covariáveis
+ a clasificação se torne muito mais clara e simples, consequentemente*
+
+*As covariáveis utilizadas foram definidas / estabelecidas na proposta da tarefa, **sabatina***
+
+***
+
+### Curvas ROC
+
+***
+
+```{r, results='hide', fig.width=8.75, fig.height=8.25}
+library(pROC)
+
+par(mfrow = c(2, 2))
+plot.roc(roc(Pima.te$type, predict(fit_glm
+                                   , data.frame(bmi = Pima.te$bmi, ped = Pima.te$ped)
+                                   , type = "response"))
+         , print.auc = TRUE, print.thres = TRUE, las = 1
+         , xlab = "Especificidade", ylab = "Sensibilidade", main = "Regressão Logística")
+plot.roc(roc(Pima.te$type, pred_l$posterior[ , 2]), print.auc = TRUE, print.thres = TRUE, las = 1
+         , xlab = "Especificidade", ylab = "Sensibilidade", main = "Discriminante linear")
+plot.roc(roc(Pima.te$type, pred_q$posterior[ , 2]), print.auc = TRUE, print.thres = TRUE, las = 1
+         , xlab = "Especificidade", ylab = "Sensibilidade", main = "Discriminante quadrático")
+plot.roc(roc(Pima.te$type, pred_r$posterior[ , 2]), print.auc = TRUE, print.thres = TRUE, las = 1
+         , xlab = "Especificidade", ylab = "Sensibilidade", main = "Discriminante regularizado")
+```
+
+*Pelo AUC o modelo com melhor poder preditivo é o discriminante linear, contudo,
+ os valores de área abaixo da curva não diferem muito (maior diferença de 0.051)*
+
+Especificidade: Proporção de resultados negativos em indivíduos livres da doença
+
+Sensibilidade: Proporção de resultados positivos em indivíduos com a doença
+
+A doença aqui em questão é a diabetes, e um maior peso pode ser atribuído a sensibilidade, i.e,
+é mais importante termos uma baixa proporção de indivíduos doentes com resultado negativo
+no exame (consequentemente não sendo tratados) do que uma baixa proporção de indivíduos
+livres da doença com resultado positivo no exame (consequentemente sendo tratados)
+
+*Olhando para a sensibilidade o melhor modelo é o discriminante linear, e olhando para a
+ sensibilidade e a especificade, juntas, o melhor modelo ainda é o discriminante linear*
+
+*Os resultados do discriminante linear são muito próximos dos resultados obtidos com a
+ regressão logística*
+
+***
