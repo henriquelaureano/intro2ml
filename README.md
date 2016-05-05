@@ -25,6 +25,8 @@ Repository with the developed activities for discipline ce062
 
 + [Resampling methods](http://mynameislaure.github.io/resampling_methods/)
 
++ [Supervisioned classification methods](http://mynameislaure.github.io/supervisioned_classification_methods/)
+
 *Final activity:*
 
 + [Kobe Bryant Shot Selection](http://mynameislaure.github.io/Kobe_Bryant_Shot_Selection/)
