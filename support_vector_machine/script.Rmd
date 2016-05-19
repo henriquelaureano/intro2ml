@@ -1,0 +1,455 @@
+# Sabatina,
+
+## *assunto*: Support Vector Machine (SVM)
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                 [GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                 [GitHub](https://github.com/mynameislaure),
+                                 [LEG GitLab](http://git.leg.ufpr.br/u/laureano)]
+
+### Maio de 2016
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=130)
+```
+
+***
+
+<div id="TOC" >
+<ul>
+<li><a href="#banco-de-dados"><font size="5">Banco de dados</font></a></li>
+<li>
+<a href="#svm-kernel"><font size="5">SVM Kernel</font></a>
+<ul><li><a href="#linear"><font size="5">Linear</font></a></li></ul>
+<ul><li><a href="#polinomial"><font size="5">Polinomial</font></a></li></ul>
+<ul><li><a href="#radial"><font size="5">Radial</font></a></li></ul>
+<ul><li><a href="#sigmoid"><font size="5">Sigmoid</font></a></li></ul>
+</li>
+<li><a href="#comparando-os-diferentes-tipos-de-kernel.-qual-se-saiu-melhor"><font size="5">Comparando os diferentes tipos de kernel. Qual se saiu melhor?</font></a></li>
+</ul>
+</div>
+
+***
+
+## Banco de dados
+
+***
+
+```{r}
+data(iris)
+```
+
+> Medidas em centímetros do comprimento e largura da sépala e pétala, respectivamente,
+de 50 flores de três espécies de iris. As espécies são *Iris setosa*, *versicolor* e *virginica*
+
+```{r}
+summary(iris)
+```
+
+***
+
+**Base de treino:**
+
+```{r}
+linhas <- matrix(c(0, 50, 100)
+                 , ncol = 3
+                 , nrow = 30
+                 , byrow = TRUE) + replicate(3, sample(1:50, 30))
+
+iris.tr <- iris[linhas, ]
+
+summary(iris.tr)
+```
+
+***
+
+**Base de teste:**
+
+```{r}
+iris.te <- iris[-linhas, ]
+
+summary(iris.te)
+```
+
+***
+
+## SVM Kernel
+
+***
+
+```{r}
+library(e1071)
+```
+
+***
+
+### Linear
+
+***
+
+> \[ K(x_{i}, x_{j}) = \left \langle x_{i}, x_{j} \right \rangle \]
+
+***
+
+```{r}
+svm_l <- svm(Species ~ ., iris.tr
+             , kernel = "linear")
+summary(svm_l)
+```
+
+***
+
+Como o **classificador** se saiu?
+
+```{r}
+tr.svm_l <- predict(svm_l, iris.tr)
+
+table(tr.svm_l, iris.tr$Species)
+```
+
+Na base de treino ele se saiu muito bem, só errou uma classificação.
+A flor é da espécie *virginica* mas foi classificada como *versicolor*.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm_l <- predict(svm_l, iris.te)
+
+table(te.svm_l, iris.te$Species)
+```
+
+Na base de teste ele também se saiu muito bem, cometendo apenas um erro.
+A flor é da espécie *versicolor* mas foi classificada como *virginica*.
+
+***
+
+E o parâmetro `custo`, será que encontramos um melhor? 
+
+```{r}
+(tune.svm_l <- tune(svm
+                    , Species ~ .
+                    , data = iris.tr
+                    , kernel = "linear"
+                    , ranges = list(cost = c(.0001, .001, .01, .1, .5, 1, 2.5, 5, 7.5, 10))))
+summary(tune.svm_l)
+```
+
+Dez diferentes valores foram propostos, a atual valor, 1, se mostrou melhor (com um menor erro).
+
+***
+
+### Polinomial
+
+***
+
+> \[ K(x_{i}, x_{j}) = (c_{0} + \gamma \left \langle x_{i}, x_{j} \right \rangle)^{d} \]
+
+***
+
+```{r}
+svm_p <- svm(Species ~ ., iris.tr
+             , kernel = "polynomial")
+summary(svm_p)
+```
+
+***
+
+Como o classificador se saiu?
+
+```{r}
+tr.svm_p <- predict(svm_p, iris.tr)
+
+table(tr.svm_p, iris.tr$Species)
+```
+
+Na base de treino ele errou aqui um pouco mais,
+classificando 7 flores da espécie  *virginica* como *versicolor*.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm_p <- predict(svm_p, iris.te)
+
+table(te.svm_p, iris.te$Species)
+```
+
+Na base de teste ele também não se saiu muito bem,
+classificando 9 flores da espécie *virginica* como  *versicolor*.
+
+***
+
+Será que encontramos melhores parâmetros? 
+
+```{r}
+(tune.svm_p <- tune(svm
+                    , Species ~ .
+                    , data = iris.tr
+                    , kernel = "polynomial"
+                    , ranges = list(cost = c(.5, 1, 2.5)
+                                    , degree = c(2, 3, 4)
+                                    , gamma = c(.01, .25, .5)
+                                    , coef0 = c(-1, 0, 1))))
+```
+
+Testamos diferentes valores para os parâmetros e apenas um ficou diferente do *default*,
+\(\gamma\), que de 0.25 foi para 0.5.
+
+***
+
+Com essa mudança no parâmetro, como o classificador se sai na base de treino?
+
+```{r}
+svm.tune_p <- svm(Species ~ ., iris.tr
+                  , gamma = .5
+                  , kernel = "polynomial")
+
+tr.svm.tune_p <- predict(svm.tune_p, iris.tr)
+
+table(tr.svm.tune_p, iris.tr$Species)
+```
+
+Melhor. Antes ele classificava 7 flores de *virginica* errado,
+agora apenas 2 flores são classificadas erradas, como *versicolor*.
+
+***
+
+E na base de teste, como ele se sai?
+
+```{r}
+te.svm.tune_p <- predict(svm.tune_p, iris.te)
+
+table(te.svm.tune_p, iris.te$Species)
+```
+
+Aqui ele também se saiu melhor. Antes 9 flores de *virginica* eram classificadas erradas,
+agora 5 flores são classificadas erradas como *versicolor*.
+
+***
+
+### Radial
+
+***
+
+> \[ K(x_{i}, x_{j}) = {\rm exp} (- \gamma \left \| x_{i}, x_{j} \right \|^{2}) \]
+
+***
+
+```{r}
+svm_r <- svm(Species ~ ., iris.tr
+             , kernel = "radial")
+summary(svm_r)
+```
+
+***
+
+Como o classificador se saiu?
+
+```{r}
+tr.svm_r <- predict(svm_r, iris.tr)
+
+table(tr.svm_r, iris.tr$Species)
+```
+
+Na base de treino ele se saiu bem,
+classificando apenas 2 flores da espécie  *virginica* como *versicolor*.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm_r <- predict(svm_r, iris.te)
+
+table(te.svm_r, iris.te$Species)
+```
+
+Na base de teste ele também se saiu bem,
+classificando apenas uma flor da espécie *versicolor* como *virginica*
+e uma flor *virginica* como  *versicolor*.
+
+***
+
+Será que encontramos melhores parâmetros? 
+
+```{r}
+(tune.svm_r <- tune(svm
+                    , Species ~ .
+                    , data = iris.tr
+                    , kernel = "radial"
+                    , ranges = list(cost = c(.5, 1, 2.5, 5)
+                                    , gamma = c(.01, .1, .25, .5))))
+```
+
+Ambos os parâmetros mudaram, o `custo` aumentou para 2.5 e \(\gamma\) diminuiu para 0.1.
+
+***
+
+Com essa mudança nos parâmetros, como o classificador se sai na base de treino?
+
+```{r}
+svm.tune_r <- svm(Species ~ ., iris.tr
+                  , cost = 2.5
+                  , gamma = .1
+                  , kernel = "radial")
+
+tr.svm.tune_r <- predict(svm.tune_r, iris.tr)
+
+table(tr.svm.tune_r, iris.tr$Species)
+```
+
+Os mesmos resultados são obtidos.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm.tune_r <- predict(svm.tune_r, iris.te)
+
+table(te.svm.tune_r, iris.te$Species)
+```
+
+Aqui também os mesmos resultados foram obtidos.
+
+***
+
+### Sigmoid
+
+***
+
+> \[ K(x_{i}, x_{j}) = {\rm tanh} (c_{0} + \gamma \left \langle x_{i}, x_{j} \right \rangle) \]
+
+***
+```{r}
+svm_s <- svm(Species ~ ., iris.tr
+             , kernel = "sigmoid")
+summary(svm_s)
+```
+
+***
+
+Como o classificador se saiu?
+
+```{r}
+tr.svm_s <- predict(svm_s, iris.tr)
+
+table(tr.svm_s, iris.tr$Species)
+```
+
+Na base de treino 4 erros foram cometidos.
+Uma flor da espécie *virginica* foi classificada como *versicolor*,
+e três da espécie *versicolor* foram classificadas como *virginica*.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm_s <- predict(svm_s, iris.te)
+
+table(te.svm_s, iris.te$Species)
+```
+
+Aqui os resultados foram muito bons obtidos. Apenas 2 erros ocorrem.
+Uma flor da espécie *versicolor* é classificada como *virginica*,
+e uma flor *virginica* é classificada como *versicolor*.
+
+***
+
+Será que encontramos melhores parâmetros? 
+
+```{r}
+(tune.svm_s <- tune(svm
+                    , Species ~ .
+                    , data = iris.tr
+                    , kernel = "sigmoid"
+                    , ranges = list(cost = c(.5, 1, 2.5, 5)
+                                    , gamma = c(.01, .1, .25, .5)
+                                    , coef0 = c(-1, 0, 1))))
+```
+
+Todos os parâmetros mudam. 
+O `custo` aumenta para 2.5, e \(\gamma\) diminuí para 0.1, e \(c\) diminuí para -1.
+
+***
+
+Como o classificador se sai agora na base de treino?
+
+```{r}
+svm.tune_s <- svm(Species ~ ., iris.tr
+                  , cost = 2.5
+                  , gamma = .1
+                  , coef0 = -1
+                  , kernel = "sigmoid")
+
+tr.svm.tune_s <- predict(svm.tune_s, iris.tr)
+
+table(tr.svm.tune_s, iris.tr$Species)
+```
+
+Os resultados melhoram um pouco. Agora 3 erros ocorrem.
+Três flores *virginica* são classificadas como *versicolor*.
+
+***
+
+E na base de teste?
+
+```{r}
+te.svm.tune_s <- predict(svm.tune_s, iris.te)
+
+table(te.svm.tune_s, iris.te$Species)
+```
+
+Aqui os resultados são piores. Antes 2 erros ocorreram, agora 5 erros ocorrem.
+Cinco flores da espécie *virginica* são classificadas como *versicolor*.
+
+***
+
+## Comparando os diferentes tipos de kernel. Qual se saiu melhor?
+
+***
+
+Observamos que nem sempre os parâmetros *default* se saem melhor, o que é totalmente lógico
+e de se esperar.
+
+Bons resultados nas bases de treino são bons indicadores,
+mas no final nosso objetivo é classificar bem a base de teste.
+
+```{r}
+# Classificação da base de teste: SVM Kernel Linear
+table(te.svm_l, iris.te$Species)
+
+# Classificação da base de teste: SVM Kernel Polinomial
+table(te.svm.tune_p, iris.te$Species)
+
+# Classificação da base de teste: SVM Kernel Radial
+table(te.svm.tune_r, iris.te$Species)
+
+# Classificação da base de teste: SVM Kernel Sigmoid
+table(te.svm_s, iris.te$Species)
+```
+
+Independente do kernel usado previsões perfeitas são obtidas para as flores da espécie *setosa*.
+
+As maiores dificuldades são obtidas na hora de classificar as flores da espécie *virginica*.
+
+> Os melhores resultados são obtidos com o kernel linear, contudo,
+  cada vez que o algoritmo for processado diferentes parâmetros e resultados, consequentemente,
+  podem ser obtidos. Logo, não podemos afirmar que o kernel linear é de longe o melhor.
+
+> Podemos dizer que para essa base de dados o kernel linear, radial, e sigmoid
+  classificam de maneira muito similar. Quando olhamos para isso e para
+  o grau de complexidade do classificador tendemos a escolher o kernel linear como melhor,
+  já que ele é o mais simples de todos. Embora aqui os custos computacionais sejam muito próximos,
+  dado que a base de dados não é muito grande.
+
+***
