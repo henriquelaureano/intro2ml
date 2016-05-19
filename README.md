@@ -27,6 +27,8 @@ Repository with the developed activities for discipline ce062
 
 + [Supervisioned classification methods](http://mynameislaure.github.io/supervisioned_classification_methods/)
 
++ [Support Vector Machine](http://mynameislaure.github.io/support_vector_machine/)
+
 *Final activity:*
 
 + [Kobe Bryant Shot Selection](http://mynameislaure.github.io/Kobe_Bryant_Shot_Selection/)
