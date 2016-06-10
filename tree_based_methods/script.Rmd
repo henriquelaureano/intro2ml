@@ -1,0 +1,257 @@
+# Sabatina,
+
+## *assunto*: métodos baseados em árvores
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                 [GitHub](https://github.com/mynameislaure),
+                                 [Lattes](http://lattes.cnpq.br/2224901552085090)]
+
+### Junho de 2016
+
+```{r include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=125)
+```
+
+***
+
+<div id="TOC" >
+<ul>
+<li><a href="#proposta"><font size="5">Proposta</font></a></li>
+<li><a href="#banco-de-dados"><font size="5">Banco de dados</font></a></li>
+<li>
+<a href="#random-forest"><font size="5">Random Forest</font></a>
+<ul><li><a href="#base-de-treino"><font size="5">Base de treino</font></a></li></ul>
+<ul><li><a href="#base-de-teste"><font size="5">Base de teste</font></a></li></ul>
+</li>
+<li><a href="#conclusao-e-consideracoes"><font size="5">Conclusão e considerações</font></a></li>
+</ul>
+</div>
+
+***
+
+## Proposta
+
+***
+
+*Com as bases `Pima.tr` e `Pima.te` do package `MASS` encontrar as duas covariáveis
+ que melhor classificam o resultado do teste de diabetes*
+
+***
+
+## Banco de dados
+
+***
+
+```{r}
+library(MASS)
+
+data("Pima.tr")
+data("Pima.te")
+```
+
+***
+
+*Uma população de mulheres (532) com no mínimo 21 anos,
+ descendentes da tribo indígina Pima e atualmente vivendo próximo de Phoenix,
+ Arizona, que fizeram o teste para diabetes de acordo o critério da
+ Organização Mundial da Saúde (OMS)*
+  
+*Os dados foram coletados pelo Instituto Nacional Norte Americano
+ de Diabetes e Doenças de Digestivas e Renais*
+ 
+*No banco de dados de **treino** (`Pima.tr`) temos 200 indivíduos,
+ e no banco de dados de **teste** (`Pima.te`) temos os demais 332 indivíduos*
+
+***
+
++ `npreg`: número de gestações
+
+```{r}
+summary(Pima.tr$npreg)
+summary(Pima.te$npreg)
+```
+
++ `glu`: concentração de glicose no plasma em um teste oral de tolerância à glicose
+
+```{r}
+summary(Pima.tr$glu)
+summary(Pima.te$glu)
+```
+
++ `bp`: pressão sanguínea diastólica (mm Hg)
+
+```{r}
+summary(Pima.tr$bp)
+summary(Pima.te$bp)
+```
+
++ `skin`: espessura da prega cutânea no tríceps (mm)
+
+```{r}
+summary(Pima.tr$skin)
+summary(Pima.te$skin)
+```
+
++ `bmi`: índice de massa corporal (\(peso (kg) / altura (m)^{2}\))
+
+```{r}
+summary(Pima.tr$bmi)
+summary(Pima.te$bmi)
+```
+
++ `ped`: função de diabetes pedigree
+
+```{r}
+summary(Pima.tr$ped)
+summary(Pima.te$ped)
+```
+
++ `age`: idade, em anos
+
+```{r}
+summary(Pima.tr$age)
+summary(Pima.te$age)
+```
+
++ `type`: `Yes` ou `No` para diabetes de acordo com o critério da OMS
+
+```{r}
+summary(Pima.tr$type)
+summary(Pima.te$type)
+```
+
+```{r fig.width=10, fig.height=10}
+library(latticeExtra)
+
+splom(Pima.tr[1:7]
+      , groups = Pima.tr$type
+      , col = 2:3
+      , xlab = NULL
+      , pch = 16
+      , main = "Todos os possíveis gráficos de dispersão 2 x 2"
+      , key = list(text = list(c("Diabetes: No", "Diabetes: Yes"))
+                   , columns = 2
+                   , points = TRUE
+                   , pch = 16
+                   , col = 2:3))
+```
+
+***
+
+## Random Forest
+
+***
+
+```{r}
+library(randomForest)
+```
+
+***
+
+### Base de treino
+
+***
+
+```{r}
+(model <- randomForest(type ~ .
+                       , Pima.tr
+                       , importance = TRUE
+                       , proximity = TRUE))
+```
+
+O modelo não está classificando muito bem na presença de todas as covariáveis,
+principalmente no caso das mulheres com resultado positivo
+
+```{r fig.width=10}
+importance(model)
+
+varImpPlot(model
+           , main = "Auxílio gráfico para encontrar quais covariáveis mais ajudam na classificação de Pima.tr")
+```
+
+As duas covariáveis que melhor classificam são: `glu` e `age`
+
+```{r}
+(model <- randomForest(type ~ glu + age
+                       , Pima.tr
+                       , importance = TRUE
+                       , proximity = TRUE))
+```
+
+Melhorou, mas ainda não está bom
+
+***
+
+### Base de teste
+
+***
+
+```{r}
+modelpred <- predict(model, Pima.te)
+
+(pred <- table(Pima.te$type, modelpred, dnn = list("Observado", "Predito")))
+
+# erro de classificação
+
+## No
+pred[1, 2] / sum(pred[1, ])
+
+## Yes
+pred[2, 1] / sum(pred[2, ])
+```
+
+Em `Pima.te` temos erros de classificação consideravelmente grandes,
+principalmente nas mulheres com resultado positivo para diabetes
+
+***
+
+## Conclusão e considerações
+
+***
+
+*Tanto na figura abaixo com apenas as variáveis que ficaram na floresta aleatória
+ definitiva, quanto no gráfico de dispersão 2 x 2 de todas as variáveis apresentado
+ na seção 'Banco de dados', observa-se uma grande dificuldade de classificar o
+ resultado do teste de diabetes das mulheres com bases nas variáveis. Nenhum padrão
+ é observado*
+
+*Um ponto positivo observado no resultado da floresta aleatória é que sua
+ classificação não é feita com base em um ponto de corte que visualmente pode ser
+ delimitado, ela lida melhor com problemas que não tem essa clara divisão, como é o
+ caso do banco de dados aqui estudado. Contudo, aqui ela não apresentou bons
+ resultados, dado a complexidade da classificação desejada*
+
+```{r fig.width=10}
+print(xyplot(glu ~ age
+             , groups = type
+             , col = 2:3
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Observado"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(0, 0, .5, 1), more = TRUE)
+
+print(xyplot(glu ~ age
+             , groups = modelpred
+             , col = 2:3
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Pima.te: Predito"
+             , key = list(space = "top"
+                          , text = list(c("Diabetes: No", "Diabetes: Yes"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , Pima.te)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
