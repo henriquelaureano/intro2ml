@@ -29,6 +29,8 @@ Repository with the developed activities for discipline ce062
 
 + [Support Vector Machine](http://mynameislaure.github.io/support_vector_machine/)
 
++ [Tree based methods](http://mynameislaure.github.io/tree_based_methods/)
+
 *Final activity:*
 
 + [Kobe Bryant Shot Selection](http://mynameislaure.github.io/Kobe_Bryant_Shot_Selection/)
