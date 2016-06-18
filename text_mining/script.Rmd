@@ -1,0 +1,140 @@
+# Sabatina,
+
+## *text mining reviews - The Wolf of Wall Street*
+
+> + [Emerson Rigoni](http://lattes.cnpq.br/9410653573760282)
+> + Henrique Aparecido Laureano [[GitLab](https://gitlab.c3sl.ufpr.br/u/hal11),
+                                 [GitHub](https://github.com/mynameislaure),
+                                 [Lattes](http://lattes.cnpq.br/2224901552085090)]
+
+### Junho de 2016
+
+```{r include=FALSE}
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=125)
+```
+
+***
+
+![](the_wolf.jpg)
+
+***
+
+### Dataset: 50 comentários sobre o filme no IMDb
+
+***
+
+```{r}
+# tm: text mining package
+library(tm)
+
+# lendo os dados
+path <- "C:/Users/henri/Dropbox/ce062/text_mining-sabatina7/the_wolf_of_wall_street"
+
+dados <- Corpus(DirSource(path))
+
+# <preprocessamento>
+## removendo pontuação e outros caracteres especiais
+dados <- tm_map(dados, removePunctuation)
+
+## removendo números
+dados <- tm_map(dados, removeNumbers)
+
+## deixando tudo em minúsculo
+dados <- tm_map(dados, tolower)
+
+## removendo palavras de ligação sem valor analítico
+### stopwords("english")
+dados <- tm_map(dados, removeWords, stopwords("english"))
+
+## removendo finais de conjugação e tempos das palavras, e.g., "ing", "es", "s"
+library(SnowballC)
+dados <- tm_map(dados, stemDocument)
+
+## removendo espaços desnecessários
+dados <- tm_map(dados, stripWhitespace)
+
+## removendo palavras desnecessárias
+dados <- tm_map(dados, removeWords, c("film","movie", "wolf", "wall", "street"))
+
+## deixando os dados prontos pra serem usados
+dados <- tm_map(dados, PlainTextDocument)
+
+dados <- DocumentTermMatrix(dados)
+# </preprocessamento>
+
+# as 10 palavras que mais aparecem nos comentários e quantas vezes elas aparecem
+head(freq <- sort(colSums(as.matrix(dados)), decreasing = TRUE), 10)
+
+# convertendo para data.frame
+dataframe <- data.frame(word = names(freq), freq = freq)
+
+# <gráfico de barras>
+library(latticeExtra)
+
+barchart(word ~ freq, subset(dataframe, freq >= 25)
+         , col = "#0080ff"
+         , border = "transparent"
+         , scales = list(x = list(at = seq(25, 65, 5)))
+         , xlab = "Frequência"
+         , main = "Palavras ditas ao menos 25 vezes nos comentários"
+         , par.settings = list(
+           par.main.text = list(font = 1, just = "left", x = grid::unit(5, "mm"))))
+# </gráfico de barras>
+
+# número de palavras ditas ao menos 25 vezes no comentários
+nrow(subset(dataframe, freq >= 25))
+```
+
+***
+
+Entre as palavras mais ditas estão o nome do diretor,
+atores e personagens principais.
+
+Além desssas, palavras que podem estar sendo empregadas pra representar
+reações positivas ao filme se destacam: "well", "like" e "good".
+
+Palavras que representam algumas características do filme também aparecem:
+"sex" e "drugs".
+
+Nenhuma palavra com conotação aparentemente negativa surgir entre mais ditas.
+
+***
+
+```{r}
+# número de palavras ditas ao menos 10 vezes no comentários
+nrow(subset(dataframe, freq >= 10))
+
+# <nuvem de palavras>
+library(wordcloud)
+
+wordcloud(names(freq), freq, min.freq = 10, colors = 1:5)
+# </nuvem de palavras>
+```
+
+***
+
+Com base em suas frequências as palavras que aparecem ao menos 10 vezes foram
+divididas em 5 intervalos, onde cada intervalo é representado por uma cor diferente.
+
+De maneira informal podemos chamar cada intervalo de *clusters*.
+
+*Clusters* propriamente ditos foram obtidos, contudo,
+dado o grande número de palavras presentes na base de dados (2724 palavras)
+sua visualização e entendimento ficaram inviáveis.
+
+Aparecem palavras que expressam características do filme e reações do público, como
+"drugs", "good", "watch", "long", "money", "bad", "best", "comedy",
+"hours", "boring", "entertaining", "amazing", "oscar" e "great".
+
+Com base na nuvem de palavras a inferência lógica é que o filme é bom, contudo,
+aparenta ser longo.
+
+Mesmo com a retirada de palavras de ligação, conjugações, etc,
+ainda aparecem muitas palavras irrelevantes e
+que fora do contexto empregado podem nos levar a diferentes conclusões.
+
+***
