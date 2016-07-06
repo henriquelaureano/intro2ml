@@ -1,0 +1,672 @@
+---
+title: "[Kobe Bryant Shot Selection](https://www.kaggle.com/c/kobe-bryant-shot-selection)"
+author: "[Emerson Rigoni](http://lattes.cnpq.br/9410653573760282) \\
+         
+         Henrique Aparecido Laureano [[Lattes](http://lattes.cnpq.br/2224901552085090),
+                                      [GitHub](https://github.com/mynameislaure)]"
+date: "Julho de 2016"
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+---
+
+***
+
+![](cant_really_hit_all.jpg)
+
+```{r, include=FALSE}
+library(knitr)
+
+opts_chunk$set(cache=TRUE, cache.path="cache/"
+               , fig.path="iBagens/", fig.width=6.75, dpi=100, fig.align="center"
+               , comment=NA, warning=FALSE, error=FALSE, message=FALSE)
+options(width=100)
+
+rm(list = ls())
+
+settings <- list(par.main.text = list(font = 1, just = "left", x = grid::unit(5, "mm"))
+                 , par.sub.text = list(font = 2, just = "left", x = grid::unit(5, "mm")))
+```
+
+> A temporada 2015/2016 foi a vigésima e última temporada de Kobe Bryant como jogador da   
+  NBA. A base de dados aqui analisada contabiliza todos os 30697 arremessos tentados por 
+  Kobe nessas 20 temporadas
+  
+> Destes, não sabemos se 5000 mil (16%) arremessos foram convertidos
+
+> A proposta é, a partir dos 25697 arremessos que sabemos o resultado - conversão ou não -
+  utilizar diferentes metodologias para fazer a predição desse desfecho
+
+**Para auxiliar nessa tarefa algumas covariáveis foram disponibilizadas, na próxima seção
+  algumas delas são apresentadas**
+
+```{r data_path, echo=FALSE}
+path <- "C:/Users/henri/Dropbox/ce062/Kobe_Bryant_Shot_Selection/"
+```
+
+```{r read_data, echo=FALSE}
+kobe <- read.csv2(paste0(path, "data.csv"), header = TRUE, sep = ",")
+```
+
+***
+
+# Conhecendo os dados
+
+***
+
+```{r}
+library(latticeExtra)
+```
+
+> A imensa maioria dos arremessos tentados por Kobe foram do tipo *jump shot*
+
+```{r, fig.width=10.75, out.extra='style = "margin:0 -190px"'}
+barchart(sort(table(kobe$combined_shot_type))
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = c(0, 27000)
+         , xlab = "Aremessos"
+         , main = "Arremessos por categoria"
+         , par.settings = settings
+         , panel = function(...){
+           panel.abline(v = seq(0, 26000, 1000), col = "gray90")
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+Ali os tipos de arremesso foram reunidos em maiores categorias, mas temos uma
+informação mais detalhada dos tipos de arremessos tentados
+
+```{r}
+table(kobe$action_type)
+```
+
+Olhando para esse desmembramento a diferença de *jump shots* para os demais tipos de
+arremesso tentados se torna ainda mais evidente
+
+> 26198 (85%) dos arremessos tentados por Kobe foram em temporadas regulares
+
+```{r, fig.width=10, out.extra='style = "margin:0 -150px"'}
+devel1 <- as.data.frame(xtabs(~ playoffs + combined_shot_type, kobe))
+
+devel1$combined_shot_type <- factor(
+  devel1$combined_shot_type, levels(devel1$combined_shot_type)[c(1, 3, 6, 2, 5, 4)])
+
+levels(devel1$playoffs) <- c("Temporada regular", "Playoffs")
+
+levels(devel1$playoffs) <-
+  paste0(levels(devel1$playoffs), ": "
+         , table(kobe$playoffs), " (", round(prop.table(table(kobe$playoffs)), 4)*100, "%)")
+
+barchart(combined_shot_type ~ Freq | playoffs
+         , col = "#0080ff"
+         , border = "transparent"
+         , scales = list(x = "free")
+         , xlim = list(c(0, 27000), c(0, 4500))
+         , strip = strip.custom(bg = "white")
+         , xlab = "Aremessos"
+         , main = "Arremessos por temporada regular e por playoffs"
+         , par.settings = settings
+         , devel1
+         , panel = function(...){
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+> Mais de 1/4 de todos os arremessos (27%) foram tentados no 3º quarto, com o 2º quarto
+  tendo o segundo maior volume de arremessos. Menos de 400 arremessos foram tentados em
+  prorrogações
+
+```{r, fig.height=5.5, fig.width=12, out.extra='style = "margin:0 -250px"'}
+devel2 <- as.data.frame(xtabs(~ period + combined_shot_type, kobe))
+
+devel2$combined_shot_type <- factor(
+  devel2$combined_shot_type, levels(devel2$combined_shot_type)[c(1, 3, 6, 2, 5, 4)])
+
+levels(devel2$period) <- c("1º quarto", "2º quarto", "3º quarto", "4º quarto"
+                           , "1ª prorrogação", "2ª prorrogação", "3ª prorrogação")
+
+levels(devel2$period) <-
+  paste0(levels(devel2$period), ": "
+         , table(kobe$period), " (", round(prop.table(table(kobe$period)), 4)*100, "%)")
+
+barchart(combined_shot_type ~ Freq | period
+         , scales = list(x = "free")
+         , strip = strip.custom(bg = "white")
+         , xlab = "Arremessos"
+         , main = "Arremessos por período do jogo"
+         , par.settings = settings
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = list(
+           c(0, 11000), c(0, 8000), c(0, 11000), c(0, 10000), c(0, 400), c(0, 50), c(0, 8))
+         , layout = c(4, 2)
+         , devel2
+         , panel = function(...){
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+> As temporadas 2002/2003, 2005/2006, 2007/2008 e 2008/2009 foram as temporadas com os
+  maiores números de arremesso tentados por Kobe
+
+```{r, fig.height=6}
+devel3 <- kobe
+
+devel3$season <- factor(devel3$season, levels(devel3$season)[20:1])
+
+barchart(devel3$season
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = c(0, 3000)
+         , xlab = "Arremessos"
+         , main = "Arremessos por temporada"
+         , par.settings = settings
+         , panel = function(...){
+           panel.abline(v = seq(0, 3000, 100), col = "gray90")
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+> Dispersão dos arremessos
+
+```{r, fig.height=6}
+xyplot(loc_y ~ loc_x, groups = shot_type
+       , type = c("p", "g")
+       , pch = 19
+       , col = c("#0080ff", "gray")
+       , xlab = "Longitude"
+       , ylab = "Latitude"
+       , key = list(text = list(c("Arremesso de 2 pontos", "Arremesso de 3 pontos"))
+                    , points = TRUE
+                    , col = c("#0080ff", "gray") , pch = 19, columns = 2)
+       , kobe)
+```
+
+Observa-se alguns erros na base de dados, i.e., arremessos de 2 pontos contabilizados como
+de 3, e um arremesso de 2 contabilizado como de 3 pontos
+
+> Dispersão dos arremessos pela área e zona da quadra e pela distância à cesta
+
+```{r, fig.height=9, fig.width=10, out.extra='style = "margin:0 -150px"'}
+
+print(xyplot(loc_y ~ loc_x, groups = shot_zone_area
+             , type = c("p", "g")
+             , pch = 19
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , kobe)
+      , position = c(0, .5, .5, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x, groups = shot_zone_basic
+             , type = c("p", "g")
+             , pch = 19
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , kobe)
+      , position = c(.5, .5, 1, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x, groups = shot_zone_range
+       , type = c("p", "g")
+       , pch = 19
+       , xlab = "Longitude"
+       , ylab = "Latitude"
+       , kobe)
+      , position = c(.25, 0, .75, .5))
+```
+
+> Times da conferência oeste são os adversários contra os quais Kobe tentou mais arremessos
+
+```{r, fig.height=8}
+barchart(sort(table(kobe$opponent))
+         , col = "#0080ff"
+         , border = "transparent"
+         , xlim = c(0, 2400)
+         , xlab = "Aremessos"
+         , main = "Arremessos por oponente"
+         , par.settings = settings
+         , panel = function(...){
+           panel.abline(v = seq(0, 2400, 200), col = "gray90")
+           args <- list(...)
+           panel.text(
+             args$x, args$y, paste0(args$x, " (", round(prop.table(args$x), 3)*100, "%)")
+             , pos = 4)
+           panel.barchart(...)})
+```
+
+> Entre as outras variáveis disponíveis temos a informação de quantos minutos restavam em
+  cada quarto de jogo (cada quarto tem duração de 12 minutos) e de quantos segundos restavam
+  em cada um desses minutos, além da data de cada partida
+
+***
+
+*A base de dados é grande e o volume de computações que algumas técnicas exigem é elevado,
+ portanto nem todas as variáveis disponíveis foram utilizadas*
+
+*Foi dado preferência as variáveis que mais logicamente podem influenciar na conversão,
+ ou não, do aremesso. Por exemplo: adversário, tempo restante no relógio, tipo de arremesso,
+ local da quadra em que o arremesso foi feito, se o jogo era de temporada regular ou de
+ playoff, uma indicação de quais arremessos foram tentados no mesmo jogo*
+
+***
+
+# Modelos
+
+***
+
+```{r}
+levels(kobe$combined_shot_type) <- c("Bank", "Dunk", "Hook", "Jump", "Layup", "Tip")
+
+kobe_train <- subset(kobe, !is.na(shot_made_flag))
+
+kobe_train$shot_made_flag <- factor(kobe_train$shot_made_flag, labels = c("no", "yes"))
+
+kobe_test <- subset(kobe, is.na(shot_made_flag))
+```
+
+## Gradient Boosting Machine
+
+```{r, eval=FALSE}
+library(gbm)
+
+library(caret)
+
+library(pROC)
+
+objcontrol <- trainControl(method = "cv"
+                           , number = "3"
+                           , returnResamp = "none"
+                           , summaryFunction = twoClassSummary
+                           , classProbs = TRUE)
+
+objmodel <- train(shot_made_flag
+                  ~ combined_shot_type
+                  + game_id
+                  + minutes_remaining
+                  + period
+                  + playoffs
+                  + season
+                  + seconds_remaining
+                  + shot_distance
+                  + shot_type
+                  + shot_zone_basic
+                  + shot_zone_range
+                  + opponent
+                  , kobe_train
+                  , method = "gbm"
+                  , trControl = objcontrol
+                  , metric = "ROC"
+                  , preProc = c("center", "scale"))
+```
+
+> Depois de mais de 30 horas de processamento a computação foi abortada, a metodologia
+  utilizada se mostrou muito demorada
+
+## Random Forest
+
+```{r}
+library(randomForest)
+
+set.seed(68)
+
+(model_rf <- randomForest(shot_made_flag
+                          ~ combined_shot_type
+                          + game_id
+                          + minutes_remaining
+                          + period
+                          + playoffs
+                          + season
+                          + seconds_remaining
+                          + shot_distance
+                          + shot_type
+                          + shot_zone_basic
+                          + shot_zone_range
+                          + opponent
+                          , kobe_train
+                          , importance = TRUE))
+```
+
+```{r, fig.width=10, fig.height=5, out.extra='style = "margin:0 -150px"'}
+varImpPlot(model_rf, main = "Floresta aleatória", pch = 19)
+```
+
+> A floresta se saiu bem na classificação dos arremessos não convertidos, com um erro de
+  classificação de 1.5%. Já nos arremessos convertidos o erro de classificação obtido foi
+  gigantesco, 90%!
+
+Das duas medidas calculadas para representar a importância de cada variável na
+classificação, em geral, é difícil fazer afirmações. A variável que pra uma medida se mostra a mais importante, *opponent*, na outra medida é a menos importante
+
+As variáveis *game_id*, *season*, *shot_distance* e *combined_shot_type* são as que se
+destacaram em ambas as medidas
+
+```{r, fig.height=5, fig.width=10, out.extra='style = "margin:0 -150px"'}
+print(xyplot(loc_y ~ loc_x
+             , groups = shot_made_flag
+             , col = 2:3
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Observado"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, 0, .5, 1), more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = model_rf$predicted
+             , col = 2:3
+             , pch = 19
+             , type = c("p", "g")
+             , main = "Predito"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, 0, 1, 1))
+```
+
+***
+
+## Regressão logística
+
+```{r}
+model_glm <- glm(shot_made_flag
+                 ~ combined_shot_type
+                 + game_id
+                 + minutes_remaining
+                 + period
+                 + playoffs
+                 + season
+                 + seconds_remaining
+                 + shot_distance
+                 + shot_type
+                 + shot_zone_basic
+                 + shot_zone_range
+                 + opponent
+                 , kobe_train
+                 , family = binomial)
+
+anova(model_glm, test = "Chisq")
+```
+
+> Aqui as covariáveis são inseridas sequencialmente, seguindo esse esquema apenas duas
+  variáveis não se mostraram significativas, *game_id* num modelo que já tinha
+  *combined_shot_type*, e *opponent* num modelo com todas as outras variáveis presentes
+
+```{r, fig.height=5, fig.width=10, out.extra='style = "margin:0 -150px"'}
+print(xyplot(loc_y ~ loc_x
+             , groups = shot_made_flag
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Observado"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, 0, .5, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = ifelse(model_glm$fitted.values > .5, 1, 0)
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Predito"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, 0, 1, 1))
+
+mean(ifelse(model_glm$fitted.values > .5, 1, 0) != model_glm$y)
+ 
+table(model_glm$y, ifelse(model_glm$fitted.values > .5, 1, 0))
+```
+
+> A acurácia da regressão logística foi de apenas 39%
+
+> O erro de classificação dos arremessos errados é de 16% [ 2252 / (2252+11980) ], já o
+  dos arremessos convertivos é de 67% [ 7670 / (3795+7670) ]
+
+## Discriminante de Fischer
+
+### Linear
+
+```{r, fig.height=5, fig.width=10, out.extra='style = "margin:0 -150px"'}
+library(MASS)
+
+model_dfl <- lda(shot_made_flag
+                 ~ combined_shot_type
+                 + game_id
+                 + minutes_remaining
+                 + period
+                 + playoffs
+                 + season
+                 + seconds_remaining
+                 + shot_distance
+                 + shot_type
+                 + shot_zone_basic
+                 + shot_zone_range
+                 + opponent
+                 , kobe_train)
+
+pred_dfl <- predict(model_dfl, kobe_train)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = shot_made_flag
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Observado"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, 0, .5, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = pred_dfl$class
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Predito"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, 0, 1, 1))
+
+table(kobe_train$shot_made_flag, pred_dfl$class)
+```
+
+> O erro de classificação dos arremessos errados é de 16% [ 2247 / (2247+11985) ], já o dos
+  arremessos convertivos é de 67% [ 7661 / (3804 + 7661) ]
+
+### Regularizado
+
+```{r, fig.height=5, fig.width=10, out.extra='style = "margin:0 -150px"'}
+library(klaR)
+
+model_dfr <- rda(shot_made_flag
+                 ~ combined_shot_type
+                 + game_id
+                 + minutes_remaining
+                 + period
+                 + playoffs
+                 + season
+                 + seconds_remaining
+                 + shot_distance
+                 + shot_type
+                 + shot_zone_basic
+                 + shot_zone_range
+                 + opponent
+                 , kobe_train)
+
+pred_dfr <- predict(model_dfr, kobe_train)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = shot_made_flag
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Observado"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, 0, .5, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = pred_dfr$class
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Predito"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, 0, 1, 1))
+
+table(kobe_train$shot_made_flag, pred_dfr$class)
+```
+
+> Aqui todos os arremessos foram classificados como convertidos
+
+***
+
+*Por problemas numéricos não foi possível utilizar o Discriminante de Fischer Quadrático*
+
+***
+
+# Predições, comparações e considerações
+
+***
+
+```{r, fig.height=9, fig.width=10, out.extra='style = "margin:0 -150px"'}
+print(xyplot(loc_y ~ loc_x
+             , groups = predict(model_rf, kobe_test)
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Floresta aleatória"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, .5, .5, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = ifelse(predict(model_glm, kobe_test, type = "response") > .5, 1, 0)
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Regressão logística"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, .5, 1, 1)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = predict(model_dfl, kobe_test)$class
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Discriminante de Fischer Linear"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(0, 0, .5, .5)
+      , more = TRUE)
+
+print(xyplot(loc_y ~ loc_x
+             , groups = predict(model_dfr, kobe_test)$class
+             , type = c("p", "g")
+             , pch = 19
+             , col = 2:3
+             , main = "Discriminante de Fischer Regularizado"
+             , xlab = "Longitude"
+             , ylab = "Latitude"
+             , key = list(space = "top"
+                          , text = list(c("Errou", "Acertou"))
+                          , points = list(col = 2:3, pch = 19, cex = .8)
+                          , columns = 2)
+             , kobe_train)
+      , position = c(.5, 0, 1, .5))
+```
+
+> Nenhuma das metodologias utilizadas resultou em ótimas predições na base de treino.
+  A Floresta Aleatória apresentou uma altíssima acurária na classificação dos aremessos
+  errados e uma acurária baixíssima nos arremessos convertidos
+
+> A Regressão Logística e o Discriminante de Fischer Linear apresentaram resultados
+  praticamente idênticos e em comparação à Floresta Aleatória tiveram uma maior acurária para
+  os arremessos convertidos e uma menor acurácia para os arremessos errados
+
+> Como os resultados não foram bons na base de treino as classificações obtidas para a base
+  de teste não são muito confiáveis
+
+> O Discriminante de Fischer Regularizado continua classificando todos os arremessos como
+  convertidos, e a Regressão Logística e o Discriminante de Fischer Linear continuam
+  tendo resultados praticamente idênticos
+
+> Essas más classficações podem simplesmente representar a dificuldade em predizer o 
+  resultado de um arremesso com base em covariáveis. Talvez o processo seja tão aleatório
+  que uma predição razoável se torna inviável e impraticável.
+
+***
