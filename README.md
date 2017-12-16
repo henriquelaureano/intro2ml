@@ -1,14 +1,14 @@
-**ce062 - Introduction to Machine Learning**
+**ce062 - Introduction to machine learning**
 
 ***
 
-Repository with the developed activities for discipline ce062
+Repository with the developed activities for the course ce062
 
 ***
 
 * University: [Federal University of Paraná (UFPR)](http://www.ufpr.br/portalufpr/)
 * Department: Statistics
-* Course: Statistics
+* Course: B.S. in Statistics
 * Period: 1o half of 2016
 * Course page: [ce062](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira:ce064)
 * Professor: [Eduardo Vargas Ferreira](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira)
@@ -19,20 +19,20 @@ Repository with the developed activities for discipline ce062
 
 *Activities:*
 
-+ [Gradient descent](http://mynameislaure.github.io/gradient_descent/)
++ [Gradient descent](http://mynameislaure.github.io/intro2ml/gradient_descent/)
 
-+ [Regularization](http://mynameislaure.github.io/regularization/)
++ [Regularization](http://mynameislaure.github.io/intro2ml/regularization/)
 
-+ [Resampling methods](http://mynameislaure.github.io/resampling_methods/)
++ [Resampling methods](http://mynameislaure.github.io/intro2ml/resampling_methods/)
 
-+ [Supervisioned classification methods](http://mynameislaure.github.io/supervisioned_classification_methods/)
++ [Supervisioned classification methods](http://mynameislaure.github.io/intro2ml/supervisioned_classification_methods/)
 
-+ [Support Vector Machine](http://mynameislaure.github.io/support_vector_machine/)
++ [Support Vector Machine](http://mynameislaure.github.io/intro2ml/support_vector_machine/)
 
-+ [Tree based methods](http://mynameislaure.github.io/tree_based_methods/)
++ [Tree based methods](http://mynameislaure.github.io/intro2ml/tree_based_methods/)
 
-+ [Text mining](http://mynameislaure.github.io/text_mining/)
++ [Text mining](http://mynameislaure.github.io/intro2ml/text_mining/)
 
 *Final activity:*
 
-+ [Kobe Bryant Shot Selection](http://mynameislaure.github.io/Kobe_Bryant_Shot_Selection/)
++ [Kobe Bryant shot selection](http://mynameislaure.github.io/intro2ml/kobe_bryant_shot_selection/)
