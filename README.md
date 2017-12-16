@@ -11,7 +11,7 @@ Repository with the developed activities for the course ce062
 * Course: B.S. in Statistics
 * Period: 1o half of 2016
 * Course page: [ce062](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira:ce064)
-* Professor: [Eduardo Vargas Ferreira](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira)
+* Professor: [Prof. M.S. Eduardo Vargas Ferreira](http://www.leg.ufpr.br/doku.php/pessoais:e.ferreira)
 
 * Student: [Henrique Aparecido Laureano](http://lattes.cnpq.br/2224901552085090)
 
