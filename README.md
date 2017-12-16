@@ -6,7 +6,7 @@ Repository with the developed activities for the course ce062
 
 ***
 
-* University: [Federal University of Paraná (UFPR)](http://www.ufpr.br/portalufpr/)
+* University: [Federal University of Paran? (UFPR)](http://www.ufpr.br/portalufpr/)
 * Department: Statistics
 * Course: B.S. in Statistics
 * Period: 1o half of 2016
@@ -19,20 +19,20 @@ Repository with the developed activities for the course ce062
 
 *Activities:*
 
-+ [Gradient descent](http://mynameislaure.github.io/intro2ml/gradient_descent/)
++ [Gradient descent](http://mynameislaure.github.io/academic_courses/intro2ml/gradient_descent/)
 
-+ [Regularization](http://mynameislaure.github.io/intro2ml/regularization/)
++ [Regularization](http://mynameislaure.github.io/academic_courses/intro2ml/regularization/)
 
-+ [Resampling methods](http://mynameislaure.github.io/intro2ml/resampling_methods/)
++ [Resampling methods](http://mynameislaure.github.io/academic_courses/intro2ml/resampling_methods/)
 
-+ [Supervisioned classification methods](http://mynameislaure.github.io/intro2ml/supervisioned_classification_methods/)
++ [Supervisioned classification methods](http://mynameislaure.github.io/academic_courses/intro2ml/supervisioned_classification_methods/)
 
-+ [Support Vector Machine](http://mynameislaure.github.io/intro2ml/support_vector_machine/)
++ [Support Vector Machine](http://mynameislaure.github.io/academic_courses/intro2ml/support_vector_machine/)
 
-+ [Tree based methods](http://mynameislaure.github.io/intro2ml/tree_based_methods/)
++ [Tree based methods](http://mynameislaure.github.io/academic_courses/intro2ml/tree_based_methods/)
 
-+ [Text mining](http://mynameislaure.github.io/intro2ml/text_mining/)
++ [Text mining](http://mynameislaure.github.io/academic_courses/intro2ml/text_mining/)
 
 *Final activity:*
 
-+ [Kobe Bryant shot selection](http://mynameislaure.github.io/intro2ml/kobe_bryant_shot_selection/)
++ [Kobe Bryant shot selection](http://mynameislaure.github.io/academic_courses/intro2ml/kobe_bryant_shot_selection/)
