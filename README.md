@@ -6,7 +6,7 @@ Repository with the developed activities for the course ce062
 
 ***
 
-* University: [Federal University of Paran? (UFPR)](http://www.ufpr.br/portalufpr/)
+* University: [Federal University of Paraná (UFPR)](http://www.ufpr.br/portalufpr/)
 * Department: Statistics
 * Course: B.S. in Statistics
 * Period: 1o half of 2016
